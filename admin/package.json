@@ -1,0 +1,25 @@
+{
+  "name": "gym-saas-admin",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "nookies": "^2.5.2",
+    "zustand": "^4.4.0",
+    "react-hot-toast": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}
