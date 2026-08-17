@@ -24,8 +24,11 @@ export default function ClassesPage() {
   const loadClasses = async () => {
     try {
       setLoading(true);
-      const data = await classesAPI.getClasses();
-      setClasses(data);
+      // TODO: Get gymId from context or route
+      const gymId = 'default-gym-id';
+      const { data, error } = await classesAPI.list(gymId);
+      if (error) throw error;
+      setClasses(data || []);
     } catch (error: any) {
       toast.error('Failed to load classes');
       console.error(error);

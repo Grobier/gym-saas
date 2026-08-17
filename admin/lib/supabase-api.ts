@@ -139,21 +139,19 @@ export const reportsAPI = {
   attendanceStats: (gymId: string, startDate: string, endDate: string) =>
     supabase
       .from('attendance')
-      .select('status, count(*)')
+      .select('*')
       .eq('gym_id', gymId)
       .gte('created_at', startDate)
-      .lte('created_at', endDate)
-      .group_by('status'),
+      .lte('created_at', endDate),
 
   revenueStats: (gymId: string, startDate: string, endDate: string) =>
     supabase
       .from('payments')
-      .select('status, sum(amount)')
+      .select('*')
       .eq('gym_id', gymId)
       .eq('status', 'completed')
       .gte('created_at', startDate)
       .lte('created_at', endDate)
-      .group_by('status')
 };
 
 export default supabase;
