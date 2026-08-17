@@ -1,0 +1,241 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.header {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.backBtn {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #007aff;
+}
+
+.backBtn:hover {
+  background: #efefef;
+}
+
+.classInfo h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #000;
+}
+
+.classInfo p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.content {
+  display: flex;
+  height: calc(100vh - 80px);
+}
+
+.sidebar {
+  width: 220px;
+  background: #fff;
+  border-right: 1px solid #eee;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.qrContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.qr {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  border: 1px solid #eee;
+  border-radius: 6px;
+}
+
+.qrHint {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin: 0;
+}
+
+.main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.statLabel {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: #007aff;
+}
+
+.roster {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.roster h3 {
+  margin: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead tr {
+  background: #f5f5f5;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+
+.table tbody tr:hover {
+  background: #fafafa;
+}
+
+.table tbody tr.marked {
+  background: #f0f8ff;
+}
+
+.table td {
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #333;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status.attended {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.noShow {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.statusPending {
+  color: #999;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.btn.active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+
+.btn.danger {
+  color: #d32f2f;
+}
+
+.btn.danger.active {
+  background: #d32f2f;
+  color: #fff;
+  border-color: #d32f2f;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
