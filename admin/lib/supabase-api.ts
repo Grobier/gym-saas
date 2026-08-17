@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { destroyCookie } from 'nookies';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -10,11 +11,14 @@ export const authAPI = {
   login: (email: string, password: string) =>
     supabase.auth.signInWithPassword({ email, password }),
 
-  logout: () => supabase.auth.signOut(),
+  logout: () => {
+    destroyCookie(null, 'authToken', { path: '/' });
+    supabase.auth.signOut();
+  },
 
   getCurrentUser: async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    return user;
+    return { data: { user } };
   }
 };
 
@@ -28,7 +32,7 @@ export const gymsAPI = {
       .eq('user_id', user?.id)
       .eq('role', 'admin');
 
-    return data?.map(g => g.gyms) || [];
+    return { data: data?.map(g => g.gyms) || [] };
   },
 
   getGym: (gymId: string) =>
@@ -42,6 +46,14 @@ export const studentsAPI = {
       .from('students')
       .select('*, user:users(name, email), reservations(count)')
       .eq('gym_id', gymId),
+
+  get: (gymId: string, studentId: string) =>
+    supabase
+      .from('students')
+      .select('*')
+      .eq('id', studentId)
+      .eq('gym_id', gymId)
+      .single(),
 
   create: (gymId: string, data: any) =>
     supabase.from('students').insert({
@@ -63,11 +75,24 @@ export const classesAPI = {
       .select('*, discipline:disciplines(*)')
       .eq('gym_id', gymId),
 
+  get: (gymId: string, classId: string) =>
+    supabase
+      .from('classes')
+      .select('*')
+      .eq('id', classId)
+      .eq('gym_id', gymId)
+      .single(),
+
   create: (gymId: string, data: any) =>
     supabase.from('class_series').insert({
       gym_id: gymId,
       ...data
     }).select().single(),
+
+  update: (gymId: string, classId: string, data: any) =>
+    supabase.from('classes').update(data)
+      .eq('id', classId)
+      .eq('gym_id', gymId),
 
   cancel: (gymId: string, classId: string) =>
     supabase.from('classes').update({ status: 'cancelled', cancelled_at: new Date() })
@@ -127,6 +152,14 @@ export const paymentsAPI = {
       .select('*, student:students(user:users(name))')
       .eq('gym_id', gymId),
 
+  get: (gymId: string, paymentId: string) =>
+    supabase
+      .from('payments')
+      .select('*')
+      .eq('id', paymentId)
+      .eq('gym_id', gymId)
+      .single(),
+
   validateTransfer: (gymId: string, paymentId: string, approved: boolean) =>
     supabase.rpc('validate_transfer', {
       p_payment_id: paymentId,
@@ -136,7 +169,7 @@ export const paymentsAPI = {
 
 // Reports
 export const reportsAPI = {
-  attendanceStats: (gymId: string, startDate: string, endDate: string) =>
+  attendance: (gymId: string, startDate: string, endDate: string) =>
     supabase
       .from('attendance')
       .select('*')
@@ -144,14 +177,20 @@ export const reportsAPI = {
       .gte('created_at', startDate)
       .lte('created_at', endDate),
 
-  revenueStats: (gymId: string, startDate: string, endDate: string) =>
+  revenue: (gymId: string, startDate: string, endDate: string) =>
     supabase
       .from('payments')
       .select('*')
       .eq('gym_id', gymId)
       .eq('status', 'completed')
       .gte('created_at', startDate)
-      .lte('created_at', endDate)
+      .lte('created_at', endDate),
+
+  members: (gymId: string) =>
+    supabase
+      .from('students')
+      .select('*')
+      .eq('gym_id', gymId)
 };
 
 export default supabase;
