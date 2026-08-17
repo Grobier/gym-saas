@@ -47,7 +47,13 @@ export default function AdminDashboard() {
 
     try {
       const { data: userData } = await authAPI.getCurrentUser();
-      setUser(userData.user);
+      if (userData.user) {
+        setUser({
+          id: userData.user.id,
+          email: userData.user.email || '',
+          name: userData.user.user_metadata?.name || userData.user.email || '',
+        });
+      }
 
       const { data: gymsData } = await gymsAPI.listMyGyms();
       setGyms(gymsData);
