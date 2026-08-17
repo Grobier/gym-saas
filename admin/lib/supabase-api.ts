@@ -26,13 +26,23 @@ export const authAPI = {
 export const gymsAPI = {
   listMyGyms: async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data } = await supabase
+    const { data: accessData } = await supabase
       .from('gym_access')
-      .select('gyms(*)')
+      .select('gym_id')
       .eq('user_id', user?.id)
       .eq('role', 'admin');
 
-    return { data: data?.map(g => g.gyms) || [] };
+    const gymIds = accessData?.map(a => a.gym_id) || [];
+    if (gymIds.length === 0) {
+      return { data: [] };
+    }
+
+    const { data: gyms } = await supabase
+      .from('gyms')
+      .select('*')
+      .in('id', gymIds);
+
+    return { data: gyms || [] };
   },
 
   getGym: (gymId: string) =>
