@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format, subDays } from 'date-fns';
 import { parseCookies } from 'nookies';
-import { authAPI, gymsAPI } from '../lib/supabase-api';
+import { authAPI, gymsAPI, convertSupabaseUser } from '../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../styles/dashboard.module.css';
@@ -48,11 +48,7 @@ export default function AdminDashboard() {
     try {
       const { data: userData } = await authAPI.getCurrentUser();
       if (userData.user) {
-        setUser({
-          id: userData.user.id,
-          email: userData.user.email || '',
-          name: userData.user.user_metadata?.name || userData.user.email || '',
-        });
+        setUser(convertSupabaseUser(userData.user));
       }
 
       const { data: gymsData } = await gymsAPI.listMyGyms();

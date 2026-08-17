@@ -6,6 +6,13 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Convert Supabase User to App User type
+export const convertSupabaseUser = (user: any) => ({
+  id: user.id,
+  email: user.email || '',
+  name: user.user_metadata?.name || user.email || 'User',
+});
+
 // Auth
 export const authAPI = {
   login: (email: string, password: string) =>

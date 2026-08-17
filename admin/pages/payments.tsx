@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { parseCookies } from 'nookies';
-import { authAPI, paymentsAPI } from '../lib/supabase-api';
+import { authAPI, paymentsAPI, convertSupabaseUser } from '../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../styles/payments.module.css';
@@ -48,7 +48,9 @@ export default function PaymentsPage() {
 
     try {
       const { data } = await authAPI.getCurrentUser();
-      setUser(data.user);
+      if (data.user) {
+        setUser(convertSupabaseUser(data.user));
+      }
     } catch {
       router.push('/login');
     }
