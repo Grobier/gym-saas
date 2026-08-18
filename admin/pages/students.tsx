@@ -44,6 +44,7 @@ export default function StudentsPage() {
     const cookies = parseCookies();
     if (!cookies.authToken) {
       router.push('/login');
+      setLoading(false);
       return;
     }
 
@@ -52,8 +53,12 @@ export default function StudentsPage() {
       if (data.user) {
         setUser(convertSupabaseUser(data.user));
       }
-    } catch {
+    } catch (error) {
+      console.error('Auth verification failed:', error);
+      toast.error('Authentication failed');
       router.push('/login');
+    } finally {
+      setLoading(false);
     }
   };
 

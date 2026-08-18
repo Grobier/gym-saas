@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -41,6 +42,9 @@ export default function AdminDashboard() {
   }, [selectedGymId]);
 
   const bootstrap = async () => {
+    setLoading(true);
+    setError(null);
+
     const cookies = parseCookies();
     if (!cookies.authToken) {
       router.push('/login');
@@ -48,19 +52,39 @@ export default function AdminDashboard() {
     }
 
     try {
-      const { data: userData } = await authAPI.getCurrentUser();
-      if (userData.user) {
-        setUser(convertSupabaseUser(userData.user));
+      // Get current user
+      const { data: userData, error: userError } = await authAPI.getCurrentUser();
+
+      if (userError || !userData.user) {
+        throw new Error('Failed to get user information');
       }
 
-      const { data: gymsData } = await gymsAPI.listMyGyms();
+      setUser(convertSupabaseUser(userData.user));
+
+      // Get user's gyms
+      const { data: gymsData, error: gymsError } = await gymsAPI.listMyGyms();
+
+      if (gymsError) {
+        console.error('Gym access error:', gymsError);
+        setError(`Unable to load your gyms: ${gymsError}`);
+        toast.error('Could not load your gyms. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (!gymsData || gymsData.length === 0) {
+        setError('You have no gyms assigned. Please contact an administrator.');
+        toast.error('No gyms assigned to your account');
+        setLoading(false);
+        return;
+      }
+
       setGyms(gymsData);
-
-      if (gymsData.length > 0) {
-        setSelectedGym(gymsData[0].id);
-      }
-    } catch (error) {
-      toast.error('Failed to load profile');
+      setSelectedGym(gymsData[0].id);
+    } catch (error: any) {
+      console.error('Bootstrap error:', error);
+      setError(error?.message || 'Failed to load profile');
+      toast.error(error?.message || 'Failed to load profile');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -90,7 +114,24 @@ export default function AdminDashboard() {
     router.push('/login');
   };
 
-  if (loading || !metrics) {
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Error</h2>
+          <p>{error}</p>
+          <button onClick={() => bootstrap()} style={{ marginRight: '1rem' }}>
+            Try Again
+          </button>
+          <button onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !metrics || gyms.length === 0) {
     return <div className={styles.container}>Loading...</div>;
   }
 

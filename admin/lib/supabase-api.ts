@@ -49,8 +49,15 @@ export const authAPI = {
   },
 
   getCurrentUser: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return { data: { user } };
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        return { data: { user: null }, error: error.message };
+      }
+      return { data: { user }, error: null };
+    } catch (error: any) {
+      return { data: { user: null }, error: error?.message || 'Unknown error' };
+    }
   }
 };
 
@@ -58,24 +65,49 @@ export const authAPI = {
 
 export const gymsAPI = {
   listMyGyms: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: accessData } = await supabase
-      .from('gym_access')
-      .select('gym_id')
-      .eq('user_id', user?.id)
-      .eq('role', 'admin');
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    const gymIds = accessData?.map(a => a.gym_id) || [];
-    if (gymIds.length === 0) {
-      return { data: [] };
+      if (userError || !user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      // Use the secure function to get user's gyms instead of direct table query
+      // This avoids RLS recursion issues
+      const { data: accessData, error: accessError } = await supabase.rpc(
+        'get_user_gyms',
+        { p_user_id: user.id, p_role: 'admin' }
+      );
+
+      if (accessError) {
+        console.error('Error fetching gym access:', accessError);
+        throw new Error(`Failed to fetch gym access: ${accessError.message}`);
+      }
+
+      const gymIds = accessData?.map((a: any) => a.gym_id) || [];
+
+      if (gymIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const { data: gyms, error: gymsError } = await supabase
+        .from('gyms')
+        .select('*')
+        .in('id', gymIds);
+
+      if (gymsError) {
+        console.error('Error fetching gyms:', gymsError);
+        throw gymsError;
+      }
+
+      return { data: gyms || [], error: null };
+    } catch (error: any) {
+      console.error('listMyGyms error:', error);
+      return {
+        data: [],
+        error: error?.message || 'Failed to fetch gyms'
+      };
     }
-
-    const { data: gyms } = await supabase
-      .from('gyms')
-      .select('*')
-      .in('id', gymIds);
-
-    return { data: gyms || [] };
   },
 
   getGym: (gymId: string) =>

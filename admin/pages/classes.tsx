@@ -29,11 +29,19 @@ export default function ClassesPage() {
       // TODO: Get gymId from context or route
       const gymId = 'default-gym-id';
       const { data, error } = await classesAPI.list(gymId);
-      if (error) throw error;
+
+      if (error) {
+        console.error('Failed to load classes:', error);
+        toast.error('Failed to load classes: ' + error);
+        setClasses([]);
+        return;
+      }
+
       setClasses(data || []);
     } catch (error: any) {
+      console.error('Class loading error:', error);
       toast.error('Failed to load classes');
-      console.error(error);
+      setClasses([]);
     } finally {
       setLoading(false);
     }
