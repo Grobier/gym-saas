@@ -24,6 +24,12 @@ export const supabase = new Proxy({} as any, {
   }
 });
 
+// ============= TYPES =============
+
+interface ListOptions {
+  [key: string]: string | number | boolean | undefined;
+}
+
 // Convert Supabase User to App User type
 export const convertSupabaseUser = (user: any) => ({
   id: user.id,
@@ -31,7 +37,8 @@ export const convertSupabaseUser = (user: any) => ({
   name: user.user_metadata?.name || user.email || 'User',
 });
 
-// Auth
+// ============= AUTH API =============
+
 export const authAPI = {
   login: (email: string, password: string) =>
     supabase.auth.signInWithPassword({ email, password }),
@@ -47,7 +54,8 @@ export const authAPI = {
   }
 };
 
-// Gyms
+// ============= GYMS API =============
+
 export const gymsAPI = {
   listMyGyms: async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -74,13 +82,21 @@ export const gymsAPI = {
     supabase.from('gyms').select('*').eq('id', gymId).single()
 };
 
-// Students
+// ============= STUDENTS API =============
+
 export const studentsAPI = {
-  list: (gymId: string) =>
-    supabase
+  list: (gymId: string, filters?: ListOptions) => {
+    let query = supabase
       .from('students')
       .select('*, user:users(name, email), reservations(count)')
-      .eq('gym_id', gymId),
+      .eq('gym_id', gymId);
+
+    if (filters?.search) {
+      query = query.or(`user.name.ilike.%${filters.search}%,user.email.ilike.%${filters.search}%`);
+    }
+
+    return query;
+  },
 
   get: (gymId: string, studentId: string) =>
     supabase
@@ -102,13 +118,21 @@ export const studentsAPI = {
       .eq('gym_id', gymId)
 };
 
-// Classes
+// ============= CLASSES API =============
+
 export const classesAPI = {
-  list: (gymId: string) =>
-    supabase
+  list: (gymId: string, filters?: ListOptions) => {
+    let query = supabase
       .from('classes')
       .select('*, discipline:disciplines(*)')
-      .eq('gym_id', gymId),
+      .eq('gym_id', gymId);
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    return query;
+  },
 
   get: (gymId: string, classId: string) =>
     supabase
@@ -135,13 +159,21 @@ export const classesAPI = {
       .eq('gym_id', gymId)
 };
 
-// Memberships
+// ============= MEMBERSHIPS API =============
+
 export const membershipsAPI = {
-  list: (gymId: string) =>
-    supabase
+  list: (gymId: string, filters?: ListOptions) => {
+    let query = supabase
       .from('memberships')
       .select('*, plan:plans(*), student:students(user:users(name))')
-      .eq('gym_id', gymId),
+      .eq('gym_id', gymId);
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    return query;
+  },
 
   listPlans: (gymId: string) =>
     supabase.from('plans').select('*').eq('gym_id', gymId),
@@ -179,13 +211,21 @@ export const membershipsAPI = {
     })
 };
 
-// Payments
+// ============= PAYMENTS API =============
+
 export const paymentsAPI = {
-  list: (gymId: string) =>
-    supabase
+  list: (gymId: string, filters?: ListOptions) => {
+    let query = supabase
       .from('payments')
       .select('*, student:students(user:users(name))')
-      .eq('gym_id', gymId),
+      .eq('gym_id', gymId);
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    return query;
+  },
 
   get: (gymId: string, paymentId: string) =>
     supabase
@@ -202,7 +242,8 @@ export const paymentsAPI = {
     })
 };
 
-// Reports
+// ============= REPORTS API =============
+
 export const reportsAPI = {
   attendance: (gymId: string, startDate: string, endDate: string) =>
     supabase
