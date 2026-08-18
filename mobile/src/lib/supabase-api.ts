@@ -52,19 +52,25 @@ export const gymsAPI = {
 
 // Classes API
 export const classesAPI = {
-  listByDateRange: (gymId: string, startDate: string, endDate: string) =>
-    supabase
+  listByDateRange: (gymId: string, startDate: string, endDate: string) => {
+    const startDateOnly = startDate.split('T')[0];
+    const endDateOnly = endDate.split('T')[0];
+
+    return supabase
       .from('classes')
-      .select('*, discipline:disciplines(*), coach:gym_access!coach_id(users(name))')
+      .select('*')
       .eq('gym_id', gymId)
-      .gte('starts_at', startDate)
-      .lte('starts_at', endDate)
-      .order('starts_at', { ascending: true }),
+      .eq('status', 'scheduled')
+      .gte('scheduled_date', startDateOnly)
+      .lte('scheduled_date', endDateOnly)
+      .order('scheduled_date', { ascending: true })
+      .order('time_start', { ascending: true });
+  },
 
   getClass: (gymId: string, classId: string) =>
     supabase
       .from('classes')
-      .select('*, discipline:disciplines(*), coach:gym_access!coach_id(users(name))')
+      .select('*')
       .eq('gym_id', gymId)
       .eq('id', classId)
       .single()

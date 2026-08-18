@@ -25,16 +25,16 @@ interface Student {
 
 interface ClassDetail {
   id: string;
-  name: string;
-  discipline: {
-    name: string;
-  };
-  coach: {
-    name: string;
-  };
-  startsAt: string;
-  endsAt: string;
-  roster: Student[];
+  gym_id: string;
+  discipline_id?: string;
+  scheduled_date?: string;
+  time_start?: string;
+  time_end?: string;
+  coaches?: string[];
+  status?: string;
+  capacity?: number;
+  roster?: any[];
+  [key: string]: any;
 }
 
 export default function ClassPage() {
@@ -129,12 +129,15 @@ export default function ClassPage() {
           ← Back
         </button>
         <div className={styles.classInfo}>
-          <h1>{classDetail.name}</h1>
-          <p>{classDetail.discipline.name}</p>
-          <p>
-            {format(new Date(classDetail.startsAt), 'HH:mm')} -{' '}
-            {format(new Date(classDetail.endsAt), 'HH:mm')}
-          </p>
+          <h1>{classDetail.id}</h1>
+          {classDetail.scheduled_date && (
+            <p>{format(new Date(classDetail.scheduled_date), 'EEEE, MMM dd')}</p>
+          )}
+          {classDetail.time_start && classDetail.time_end && (
+            <p>
+              {classDetail.time_start} - {classDetail.time_end}
+            </p>
+          )}
         </div>
       </header>
 

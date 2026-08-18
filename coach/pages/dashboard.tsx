@@ -9,16 +9,14 @@ import styles from '../styles/dashboard.module.css';
 
 interface Class {
   id: string;
-  name: string;
-  startsAt?: string;
-  starts_at?: string;
-  endsAt?: string;
-  ends_at?: string;
+  gym_id: string;
+  discipline_id?: string;
+  scheduled_date?: string;
+  time_start?: string;
+  time_end?: string;
   capacity?: number;
-  enrolled?: number;
-  discipline?: {
-    name: string;
-  };
+  status?: string;
+  coaches?: string[];
   [key: string]: any; // Allow other fields from Supabase
 }
 
@@ -173,27 +171,24 @@ export default function DashboardPage() {
                   onClick={() => handleClassClick(cls.id)}
                 >
                   <div className={styles.classHeader}>
-                    <h3>{cls.name}</h3>
-                    <span className={styles.time}>
-                      {format(new Date(cls.starts_at || cls.startsAt || ''), 'HH:mm')} -{' '}
-                      {format(new Date(cls.ends_at || cls.endsAt || ''), 'HH:mm')}
-                    </span>
+                    <h3>{cls.id}</h3>
+                    {cls.scheduled_date && cls.time_start && cls.time_end && (
+                      <span className={styles.time}>
+                        {cls.time_start} - {cls.time_end}
+                      </span>
+                    )}
                   </div>
 
-                  {cls.discipline?.name && (
-                    <p className={styles.discipline}>{cls.discipline.name}</p>
-                  )}
-
-                  {cls.capacity && cls.enrolled !== undefined && (
+                  {cls.capacity && (
                     <div className={styles.capacity}>
                       <span>
-                        {cls.enrolled}/{cls.capacity} enrolled
+                        Capacity: {cls.capacity}
                       </span>
                       <div className={styles.capacityBar}>
                         <div
                           className={styles.capacityFill}
                           style={{
-                            width: `${cls.capacity > 0 ? (cls.enrolled / cls.capacity) * 100 : 0}%`,
+                            width: `0%`,
                           }}
                         />
                       </div>

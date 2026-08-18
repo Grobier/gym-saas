@@ -111,21 +111,19 @@ export const classesAPI = {
     try {
       console.log('Fetching classes with params:', { gymId, startDate, endDate });
 
-      // Step 1: Try basic query without date filters to isolate the problem
-      let query = supabase
+      // Extract date part only (YYYY-MM-DD) from ISO string
+      const startDateOnly = startDate.split('T')[0];
+      const endDateOnly = endDate.split('T')[0];
+
+      const query = supabase
         .from('classes')
         .select('*')
-        .eq('gym_id', gymId);
-
-      // Step 2: Conditionally add date filters (for debugging)
-      if (startDate && endDate) {
-        console.log('Adding date filters:', { startDate, endDate });
-        query = query
-          .gte('starts_at', startDate)
-          .lte('starts_at', endDate);
-      }
-
-      query = query.order('starts_at', { ascending: true });
+        .eq('gym_id', gymId)
+        .eq('status', 'scheduled')
+        .gte('scheduled_date', startDateOnly)
+        .lte('scheduled_date', endDateOnly)
+        .order('scheduled_date', { ascending: true })
+        .order('time_start', { ascending: true });
 
       const { data, error } = await query;
 
@@ -136,7 +134,7 @@ export const classesAPI = {
           details: error.details,
           hint: error.hint,
           status: (error as any).status,
-          query: { gymId, startDate, endDate }
+          query: { gymId, startDate: startDateOnly, endDate: endDateOnly }
         });
         return { data: [], error };
       }
@@ -149,13 +147,26 @@ export const classesAPI = {
     }
   },
 
-  getClass: (gymId: string, classId: string) =>
-    supabase
-      .from('classes')
-      .select('*')
-      .eq('gym_id', gymId)
-      .eq('id', classId)
-      .single(),
+  getClass: async (gymId: string, classId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('gym_id', gymId)
+        .eq('id', classId)
+        .single();
+
+      if (error) {
+        console.error('Get Class Error:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (err: any) {
+      console.error('GetClass Exception:', err);
+      return { data: null, error: err };
+    }
+  },
 
   getWithRoster: async (gymId: string, classId: string) => {
     try {
