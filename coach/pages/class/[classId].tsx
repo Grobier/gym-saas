@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
-import { classesAPI, attendanceAPI } from '../../lib/api';
+import { classesAPI, attendanceAPI } from '../../lib/supabase-api';
 import { useGymsStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/class.module.css';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { setCookie } from 'nookies';
-import { authAPI } from '../lib/api';
+import { authAPI } from '../lib/supabase-api';
 import toast from 'react-hot-toast';
 import styles from '../styles/auth.module.css';
 

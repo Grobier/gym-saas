@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { parseCookies } from 'nookies';
-import { authAPI, gymsAPI, classesAPI } from '../lib/api';
+import { authAPI, gymsAPI, classesAPI } from '../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../styles/dashboard.module.css';

@@ -2,9 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
-  },
+  // NOTE: NEXT_PUBLIC_* variables are loaded from .env.local and Vercel
+  // No localhost fallback in production
   headers: async () => [
     {
       source: '/:path*',
