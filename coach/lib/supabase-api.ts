@@ -107,14 +107,47 @@ export const gymsAPI = {
 
 // Classes (for coach)
 export const classesAPI = {
-  listByCoach: (gymId: string, startDate: string, endDate: string) =>
-    supabase
-      .from('classes')
-      .select('*, discipline:disciplines(*)')
-      .eq('gym_id', gymId)
-      .gte('starts_at', startDate)
-      .lte('starts_at', endDate)
-      .order('starts_at', { ascending: true }),
+  listByCoach: async (gymId: string, startDate: string, endDate: string) => {
+    try {
+      console.log('Fetching classes with params:', { gymId, startDate, endDate });
+
+      // Step 1: Try basic query without date filters to isolate the problem
+      let query = supabase
+        .from('classes')
+        .select('*')
+        .eq('gym_id', gymId);
+
+      // Step 2: Conditionally add date filters (for debugging)
+      if (startDate && endDate) {
+        console.log('Adding date filters:', { startDate, endDate });
+        query = query
+          .gte('starts_at', startDate)
+          .lte('starts_at', endDate);
+      }
+
+      query = query.order('starts_at', { ascending: true });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Classes API Error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          status: (error as any).status,
+          query: { gymId, startDate, endDate }
+        });
+        return { data: [], error };
+      }
+
+      console.log('Classes fetched successfully:', data?.length || 0, 'records');
+      return { data: data || [], error: null };
+    } catch (err: any) {
+      console.error('Classes API Exception:', err);
+      return { data: [], error: err };
+    }
+  },
 
   getClass: (gymId: string, classId: string) =>
     supabase
@@ -125,23 +158,46 @@ export const classesAPI = {
       .single(),
 
   getWithRoster: async (gymId: string, classId: string) => {
-    const { data: classData } = await supabase
-      .from('classes')
-      .select('*, discipline:disciplines(*)')
-      .eq('gym_id', gymId)
-      .eq('id', classId)
-      .single();
+    try {
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('gym_id', gymId)
+        .eq('id', classId)
+        .single();
 
-    const { data: roster } = await supabase
-      .from('reservations')
-      .select('*, student:students(id, user:users(name))')
-      .eq('class_id', classId)
-      .eq('status', 'confirmed');
+      if (classError) {
+        console.error('Get Class Error:', {
+          code: classError.code,
+          message: classError.message,
+          details: classError.details,
+          hint: classError.hint,
+        });
+        return { data: null, error: classError };
+      }
 
-    return {
-      ...classData,
-      roster: roster || []
-    };
+      const { data: roster, error: rosterError } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('class_id', classId)
+        .eq('status', 'confirmed');
+
+      if (rosterError) {
+        console.error('Get Roster Error:', rosterError);
+        return { data: { ...classData, roster: [] }, error: rosterError };
+      }
+
+      return {
+        data: {
+          ...classData,
+          roster: roster || []
+        },
+        error: null
+      };
+    } catch (err: any) {
+      console.error('GetWithRoster Exception:', err);
+      return { data: null, error: err };
+    }
   }
 };
 

@@ -10,18 +10,27 @@ import styles from '../styles/dashboard.module.css';
 interface Class {
   id: string;
   name: string;
-  startsAt: string;
-  endsAt: string;
-  capacity: number;
-  enrolled: number;
-  discipline: {
+  startsAt?: string;
+  starts_at?: string;
+  endsAt?: string;
+  ends_at?: string;
+  capacity?: number;
+  enrolled?: number;
+  discipline?: {
     name: string;
   };
+  [key: string]: any; // Allow other fields from Supabase
+}
+
+interface ApiError {
+  code?: string;
+  message?: string;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
+  const [classError, setClassError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -74,9 +83,23 @@ export default function DashboardPage() {
       const startDate = format(startOfDay(selectedDate), "yyyy-MM-dd'T'HH:mm:ss");
       const endDate = format(endOfDay(selectedDate), "yyyy-MM-dd'T'HH:mm:ss");
 
-      const { data } = await classesAPI.listByCoach(selectedGymId, startDate, endDate);
-      setClasses(data);
-    } catch (error) {
+      const { data, error } = await classesAPI.listByCoach(selectedGymId, startDate, endDate);
+
+      if (error) {
+        console.error('Failed to load classes:', error);
+        setClassError(error as ApiError);
+        setClasses([]);
+        toast.error(`Failed to load classes: ${error.message || 'Unknown error'}`);
+        return;
+      }
+
+      // Ensure data is always an array
+      setClasses(data || []);
+      setClassError(null);
+    } catch (error: any) {
+      console.error('Classes fetch exception:', error);
+      setClassError(error);
+      setClasses([]);
       toast.error('Failed to load classes');
     }
   };
@@ -132,7 +155,12 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {classes.length === 0 ? (
+          {classError ? (
+            <div className={styles.empty}>
+              <p style={{ color: '#d32f2f' }}>Error loading classes</p>
+              <small>{classError.message || 'Unknown error'}</small>
+            </div>
+          ) : classes.length === 0 ? (
             <div className={styles.empty}>
               <p>No classes scheduled for this date</p>
             </div>
@@ -147,26 +175,30 @@ export default function DashboardPage() {
                   <div className={styles.classHeader}>
                     <h3>{cls.name}</h3>
                     <span className={styles.time}>
-                      {format(new Date(cls.startsAt), 'HH:mm')} -{' '}
-                      {format(new Date(cls.endsAt), 'HH:mm')}
+                      {format(new Date(cls.starts_at || cls.startsAt || ''), 'HH:mm')} -{' '}
+                      {format(new Date(cls.ends_at || cls.endsAt || ''), 'HH:mm')}
                     </span>
                   </div>
 
-                  <p className={styles.discipline}>{cls.discipline.name}</p>
+                  {cls.discipline?.name && (
+                    <p className={styles.discipline}>{cls.discipline.name}</p>
+                  )}
 
-                  <div className={styles.capacity}>
-                    <span>
-                      {cls.enrolled}/{cls.capacity} enrolled
-                    </span>
-                    <div className={styles.capacityBar}>
-                      <div
-                        className={styles.capacityFill}
-                        style={{
-                          width: `${(cls.enrolled / cls.capacity) * 100}%`,
-                        }}
-                      />
+                  {cls.capacity && cls.enrolled !== undefined && (
+                    <div className={styles.capacity}>
+                      <span>
+                        {cls.enrolled}/{cls.capacity} enrolled
+                      </span>
+                      <div className={styles.capacityBar}>
+                        <div
+                          className={styles.capacityFill}
+                          style={{
+                            width: `${cls.capacity > 0 ? (cls.enrolled / cls.capacity) * 100 : 0}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <button className={styles.actionBtn}>
                     Take Attendance
