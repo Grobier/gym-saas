@@ -1,10 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 import { destroyCookie } from 'nookies';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+let supabaseInstance: any = null;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const getSupabase = () => {
+  if (supabaseInstance) return supabaseInstance;
+
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase credentials not configured');
+  }
+
+  supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabaseInstance;
+};
+
+export const supabase = new Proxy({} as any, {
+  get: (target, prop) => {
+    const client = getSupabase();
+    return (client as any)[prop];
+  }
+});
 
 // Convert Supabase User to App User type
 export const convertSupabaseUser = (user: any) => ({
