@@ -31,34 +31,34 @@ export default function ClassesPage() {
       const { data, error } = await classesAPI.list(gymId);
 
       if (error) {
-        console.error('Failed to load classes:', error);
-        toast.error('Failed to load classes: ' + error);
+        console.error('Error al cargar clases:', error);
+        toast.error('Error al cargar clases: ' + error);
         setClasses([]);
         return;
       }
 
       setClasses(data || []);
     } catch (error: any) {
-      console.error('Class loading error:', error);
-      toast.error('Failed to load classes');
+      console.error('Error cargando clases:', error);
+      toast.error('Error al cargar las clases');
       setClasses([]);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Cargando...</div>;
 
   return (
     <div>
-      <h1>Classes</h1>
+      <h1>Clases</h1>
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Schedule</th>
-            <th>Capacity</th>
-            <th>Enrolled</th>
+            <th>Nombre</th>
+            <th>Horario</th>
+            <th>Capacidad</th>
+            <th>Inscritos</th>
           </tr>
         </thead>
         <tbody>

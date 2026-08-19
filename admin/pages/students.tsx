@@ -55,7 +55,7 @@ export default function StudentsPage() {
       }
     } catch (error) {
       console.error('Auth verification failed:', error);
-      toast.error('Authentication failed');
+      toast.error('Error de autenticación');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export default function StudentsPage() {
       const { data } = await studentsAPI.list(selectedGymId, { search });
       setStudents(data);
     } catch (error) {
-      toast.error('Failed to load students');
+      toast.error('Error al cargar estudiantes');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function StudentsPage() {
       const { data } = await studentsAPI.create(selectedGymId!, formData);
       setStudents([data, ...students]);
       setShowModal(false);
-      toast.success('Student added successfully');
+      toast.success('Estudiante agregado correctamente');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to add student');
     }
@@ -96,9 +96,9 @@ export default function StudentsPage() {
     try {
       await studentsAPI.delete(selectedGymId!, studentId);
       setStudents(students.filter((s) => s.id !== studentId));
-      toast.success('Student deleted');
+      toast.success('Estudiante eliminado');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete student');
+      toast.error(error.response?.data?.message || 'Error al eliminar estudiante');
     }
   };
 
@@ -109,22 +109,22 @@ export default function StudentsPage() {
   );
 
   if (loading) {
-    return <div className={styles.container}>Loading...</div>;
+    return <div className={styles.container}>Cargando...</div>;
   }
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Students</h1>
+        <h1>Estudiantes</h1>
         <button onClick={() => setShowModal(true)} className={styles.primaryBtn}>
-          + Add Student
+          + Agregar Estudiante
         </button>
       </header>
 
       <div className={styles.searchBar}>
         <input
           type="text"
-          placeholder="Search by name or email..."
+          placeholder="Buscar por nombre o correo..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           className={styles.searchInput}
@@ -135,20 +135,20 @@ export default function StudentsPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Active Reservations</th>
-              <th>Total Visits</th>
-              <th>Joined</th>
-              <th>Actions</th>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Teléfono</th>
+              <th>Reservas Activas</th>
+              <th>Total Visitas</th>
+              <th>Se Unió</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredStudents.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.empty}>
-                  No students found
+                  No se encontraron estudiantes
                 </td>
               </tr>
             ) : (
@@ -161,20 +161,20 @@ export default function StudentsPage() {
                     <span className={styles.badge}>{student.activeReservations || 0}</span>
                   </td>
                   <td>{student.totalVisits || 0}</td>
-                  <td>{new Date(student.createdAt).toLocaleDateString()}</td>
+                  <td>{new Date(student.createdAt).toLocaleDateString('es-CL')}</td>
                   <td>
                     <div className={styles.actions}>
                       <button
                         onClick={() => router.push(`/students/${student.id}`)}
                         className={styles.btnSmall}
                       >
-                        View
+                        Ver
                       </button>
                       <button
                         onClick={() => handleDeleteStudent(student.id)}
                         className={styles.btnSmall + ' ' + styles.danger}
                       >
-                        Delete
+                        Eliminar
                       </button>
                     </div>
                   </td>

@@ -55,8 +55,8 @@ export default function PaymentsPage() {
         setUser(convertSupabaseUser(data.user));
       }
     } catch (error) {
-      console.error('Auth verification failed:', error);
-      toast.error('Authentication failed');
+      console.error('Error de autenticación:', error);
+      toast.error('Error de autenticación');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -70,7 +70,7 @@ export default function PaymentsPage() {
       const { data } = await paymentsAPI.list(selectedGymId, { status: statusFilter });
       setPayments(data);
     } catch (error) {
-      toast.error('Failed to load payments');
+      toast.error('Error al cargar pagos');
     } finally {
       setLoading(false);
     }
@@ -86,9 +86,9 @@ export default function PaymentsPage() {
       setPayments(
         payments.map((p) => (p.id === paymentId ? { ...p, status: 'completed' } : p))
       );
-      toast.success('Transfer approved');
+      toast.success('Transferencia aprobada');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to approve');
+      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
@@ -96,9 +96,9 @@ export default function PaymentsPage() {
     try {
       await paymentsAPI.validateTransfer(selectedGymId!, paymentId, false);
       setPayments(payments.map((p) => (p.id === paymentId ? { ...p, status: 'failed' } : p)));
-      toast.success('Transfer rejected');
+      toast.success('Transferencia rechazada');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to reject');
+      toast.error(error.response?.data?.message || 'Error al rechazar');
     }
   };
 
@@ -122,7 +122,7 @@ export default function PaymentsPage() {
       : payments.filter((p) => p.status === statusFilter);
 
   if (loading) {
-    return <div className={styles.container}>Loading...</div>;
+    return <div className={styles.container}>Cargando...</div>;
   }
 
   const stats = {
@@ -139,26 +139,26 @@ export default function PaymentsPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Payments</h1>
+        <h1>Pagos</h1>
       </header>
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <h3>Total Revenue</h3>
+          <h3>Ingresos Totales</h3>
           <p className={styles.statValue}>${(stats.revenue / 1000).toFixed(1)}k</p>
-          <span>{stats.completed} completed</span>
+          <span>{stats.completed} completados</span>
         </div>
 
         <div className={styles.statCard}>
-          <h3>Pending</h3>
+          <h3>Pendientes</h3>
           <p className={styles.statValue}>{stats.pending}</p>
-          <span>Needs attention</span>
+          <span>Requiere atención</span>
         </div>
 
         <div className={styles.statCard}>
-          <h3>Failed</h3>
+          <h3>Fallidos</h3>
           <p className={styles.statValue}>{stats.failed}</p>
-          <span>Review required</span>
+          <span>Revisión requerida</span>
         </div>
       </div>
 
@@ -168,11 +168,11 @@ export default function PaymentsPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className={styles.select}
         >
-          <option value="all">All Payments</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
-          <option value="pending_validation">Pending Validation</option>
-          <option value="failed">Failed</option>
+          <option value="all">Todos los Pagos</option>
+          <option value="completed">Completados</option>
+          <option value="pending">Pendientes</option>
+          <option value="pending_validation">Pendiente de Validación</option>
+          <option value="failed">Fallidos</option>
         </select>
       </div>
 
@@ -180,19 +180,19 @@ export default function PaymentsPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Student</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
+              <th>Estudiante</th>
+              <th>Monto</th>
+              <th>Método</th>
+              <th>Estado</th>
+              <th>Creado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredPayments.length === 0 ? (
               <tr>
                 <td colSpan={6} className={styles.empty}>
-                  No payments found
+                  No se encontraron pagos
                 </td>
               </tr>
             ) : (
@@ -208,7 +208,7 @@ export default function PaymentsPage() {
                       {payment.status.replace('_', ' ').toUpperCase()}
                     </span>
                   </td>
-                  <td>{format(new Date(payment.createdAt), 'MMM dd, yyyy')}</td>
+                  <td>{format(new Date(payment.createdAt), 'dd MMM, yyyy')}</td>
                   <td>
                     {payment.status === 'pending_validation' && (
                       <div className={styles.actions}>
@@ -216,7 +216,7 @@ export default function PaymentsPage() {
                           onClick={() => handleApproveTransfer(payment.id)}
                           className={styles.btnSuccess}
                         >
-                          Approve
+                          Aprobar
                         </button>
                         <button
                           onClick={() => handleRejectTransfer(payment.id)}
