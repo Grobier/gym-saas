@@ -76,7 +76,7 @@ export default function ClassPage() {
       });
       setAttendance(attMap);
     } catch (error) {
-      toast.error('Failed to load class');
+      toast.error('Error al cargar la clase');
       router.back();
     } finally {
       setLoading(false);
@@ -88,7 +88,7 @@ export default function ClassPage() {
       const { data } = await attendanceAPI.generateQr(selectedGymId!, classId as string);
       setQrCode(data.qrCode);
     } catch (error) {
-      console.error('Failed to generate QR', error);
+      console.error('Error al generar código QR', error);
     }
   };
 
@@ -106,27 +106,27 @@ export default function ClassPage() {
       );
 
       setAttendance((prev) => new Map(prev).set(studentId, data));
-      toast.success(`Marked as ${status}`);
+      toast.success(`Marcado como ${status === 'attended' ? 'presente' : 'ausente'}`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to mark attendance');
+      toast.error(error.response?.data?.message || 'Error al marcar asistencia');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className={styles.container}>Loading...</div>;
+    return <div className={styles.container}>Cargando...</div>;
   }
 
   if (!classDetail) {
-    return <div className={styles.container}>Class not found</div>;
+    return <div className={styles.container}>Clase no encontrada</div>;
   }
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <button onClick={() => router.back()} className={styles.backBtn}>
-          ← Back
+          ← Atrás
         </button>
         <div className={styles.classInfo}>
           <h1>{classDetail.id}</h1>
@@ -143,27 +143,27 @@ export default function ClassPage() {
 
       <div className={styles.content}>
         <aside className={styles.sidebar}>
-          <h3>QR Code</h3>
+          <h3>Código QR</h3>
           {qrCode ? (
             <div className={styles.qrContainer}>
               <img src={qrCode} alt="QR Code" className={styles.qr} />
               <p className={styles.qrHint}>Students scan to check in</p>
             </div>
           ) : (
-            <p>Generating QR...</p>
+            <p>Generando código QR...</p>
           )}
         </aside>
 
         <main className={styles.main}>
           <div className={styles.stats}>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>Attended</span>
+              <span className={styles.statLabel}>Asistentes</span>
               <span className={styles.statValue}>
                 {Array.from(attendance.values()).filter((a) => a.status === 'attended').length}
               </span>
             </div>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>No Show</span>
+              <span className={styles.statLabel}>No Asistió</span>
               <span className={styles.statValue}>
                 {Array.from(attendance.values()).filter((a) => a.status === 'no_show').length}
               </span>
@@ -175,13 +175,13 @@ export default function ClassPage() {
           </div>
 
           <div className={styles.roster}>
-            <h3>Roster</h3>
+            <h3>Lista de Asistencia</h3>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Student Name</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>Nombre del Estudiante</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,10 +199,10 @@ export default function ClassPage() {
                                 : styles.noShow
                             }`}
                           >
-                            {att.status === 'attended' ? '✓ Attended' : '✗ No Show'}
+                            {att.status === 'attended' ? '✓ Asistió' : '✗ No asistió'}
                           </span>
                         ) : (
-                          <span className={styles.statusPending}>Pending</span>
+                          <span className={styles.statusPending}>Pendiente</span>
                         )}
                       </td>
                       <td>
@@ -216,7 +216,7 @@ export default function ClassPage() {
                               att?.status === 'attended' ? styles.active : ''
                             }`}
                           >
-                            Present
+                            Presente
                           </button>
                           <button
                             onClick={() =>
@@ -227,7 +227,7 @@ export default function ClassPage() {
                               att?.status === 'no_show' ? styles.active : ''
                             }`}
                           >
-                            Absent
+                            Ausente
                           </button>
                         </div>
                       </td>

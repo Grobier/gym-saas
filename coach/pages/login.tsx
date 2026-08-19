@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      toast.error('Email and password required');
+      toast.error('Correo y contraseña son requeridos');
       return;
     }
 
@@ -35,10 +35,10 @@ export default function LoginPage() {
         path: '/',
       });
 
-      toast.success('Logged in successfully');
+      toast.success('Sesión iniciada correctamente');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      toast.error(error.response?.data?.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
@@ -47,13 +47,13 @@ export default function LoginPage() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Coach Dashboard</h1>
-        <p className={styles.subtitle}>Manage your classes & attendance</p>
+        <h1 className={styles.title}>Panel del Entrenador</h1>
+        <p className={styles.subtitle}>Gestiona tus clases y asistencia</p>
 
         <form onSubmit={handleLogin} className={styles.form}>
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Correo"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
@@ -62,7 +62,7 @@ export default function LoginPage() {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
@@ -70,7 +70,7 @@ export default function LoginPage() {
           />
 
           <button type="submit" disabled={loading} className={styles.button}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Iniciando sesión...' : 'Ingresar'}
           </button>
         </form>
       </div>

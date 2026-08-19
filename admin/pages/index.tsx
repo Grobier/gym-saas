@@ -67,14 +67,14 @@ export default function AdminDashboard() {
       if (gymsError) {
         console.error('Gym access error:', gymsError);
         setError(`Unable to load your gyms: ${gymsError}`);
-        toast.error('Could not load your gyms. Please try again.');
+        toast.error('No se pudieron cargar tus gimnasios. Por favor intenta de nuevo.');
         setLoading(false);
         return;
       }
 
       if (!gymsData || gymsData.length === 0) {
-        setError('You have no gyms assigned. Please contact an administrator.');
-        toast.error('No gyms assigned to your account');
+        setError('No tienes gimnasios asignados. Por favor contacta a un administrador.');
+        toast.error('No hay gimnasios asignados a tu cuenta');
         setLoading(false);
         return;
       }
@@ -83,8 +83,8 @@ export default function AdminDashboard() {
       setSelectedGym(gymsData[0].id);
     } catch (error: any) {
       console.error('Bootstrap error:', error);
-      setError(error?.message || 'Failed to load profile');
-      toast.error(error?.message || 'Failed to load profile');
+      setError(error?.message || 'Error al cargar el perfil');
+      toast.error(error?.message || 'Error al cargar el perfil');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
         pendingPayments: 3,
       });
     } catch (error) {
-      toast.error('Failed to load metrics');
+      toast.error('Error al cargar las métricas');
     }
   };
 
@@ -121,10 +121,10 @@ export default function AdminDashboard() {
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={() => bootstrap()} style={{ marginRight: '1rem' }}>
-            Try Again
+            Intentar de Nuevo
           </button>
           <button onClick={handleLogout}>
-            Logout
+            Cerrar sesión
           </button>
         </div>
       </div>
@@ -132,17 +132,17 @@ export default function AdminDashboard() {
   }
 
   if (loading || !metrics || gyms.length === 0) {
-    return <div className={styles.container}>Loading...</div>;
+    return <div className={styles.container}>Cargando...</div>;
   }
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Admin Dashboard</h1>
+        <h1>Panel de Administrador</h1>
         <div className={styles.userInfo}>
           <span>{user?.name}</span>
           <button onClick={handleLogout} className={styles.logoutBtn}>
-            Logout
+            Cerrar sesión
           </button>
         </div>
       </header>
@@ -155,18 +155,18 @@ export default function AdminDashboard() {
               Dashboard
             </a>
             <a href="/students" className={styles.navLink}>
-              Students
+              Estudiantes
             </a>
             <a href="/classes" className={styles.navLink}>
-              Classes
+              Clases
             </a>
             <a href="/payments" className={styles.navLink}>
-              Payments
+              Pagos
             </a>
           </nav>
 
           <div className={styles.gymSelector}>
-            <h3>Gym</h3>
+            <h3>Gimnasio</h3>
             <select
               value={selectedGymId || ''}
               onChange={(e) => setSelectedGym(e.target.value)}
@@ -184,46 +184,46 @@ export default function AdminDashboard() {
         <main className={styles.main}>
           <div className={styles.metricsGrid}>
             <div className={styles.metricCard}>
-              <h3>Total Students</h3>
+              <h3>Total de Estudiantes</h3>
               <p className={styles.metricValue}>{metrics.totalStudents}</p>
-              <span className={styles.metricLabel}>All time</span>
+              <span className={styles.metricLabel}>Todo el tiempo</span>
             </div>
 
             <div className={styles.metricCard}>
-              <h3>Active Members</h3>
+              <h3>Miembros Activos</h3>
               <p className={styles.metricValue}>{metrics.activeMembers}</p>
-              <span className={styles.metricLabel}>Current memberships</span>
+              <span className={styles.metricLabel}>Membresías actuales</span>
             </div>
 
             <div className={styles.metricCard}>
-              <h3>Total Revenue</h3>
+              <h3>Ingresos Totales</h3>
               <p className={styles.metricValue}>
                 ${(metrics.totalRevenue / 1000).toFixed(1)}k
               </p>
-              <span className={styles.metricLabel}>Last 30 days</span>
+              <span className={styles.metricLabel}>Últimos 30 días</span>
             </div>
 
             <div className={styles.metricCard}>
-              <h3>Attendance Rate</h3>
+              <h3>Tasa de Asistencia</h3>
               <p className={styles.metricValue}>{metrics.attendanceRate}%</p>
-              <span className={styles.metricLabel}>This month</span>
+              <span className={styles.metricLabel}>Este mes</span>
             </div>
 
             <div className={styles.metricCard}>
-              <h3>Classes Today</h3>
+              <h3>Clases Hoy</h3>
               <p className={styles.metricValue}>{metrics.classesToday}</p>
-              <span className={styles.metricLabel}>Scheduled</span>
+              <span className={styles.metricLabel}>Programadas</span>
             </div>
 
             <div className={styles.metricCard + ' ' + styles.warning}>
-              <h3>Pending Payments</h3>
+              <h3>Pagos Pendientes</h3>
               <p className={styles.metricValue}>{metrics.pendingPayments}</p>
-              <span className={styles.metricLabel}>Needs action</span>
+              <span className={styles.metricLabel}>Requiere atención</span>
             </div>
           </div>
 
           <div className={styles.recentActivity}>
-            <h2>Recent Activity</h2>
+            <h2>Actividad Reciente</h2>
             <div className={styles.activityList}>
               <div className={styles.activityItem}>
                 <span className={styles.activityType}>Payment</span>

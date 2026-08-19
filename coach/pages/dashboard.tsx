@@ -87,7 +87,7 @@ export default function DashboardPage() {
       }
     } catch (error: any) {
       console.error('[DASHBOARD] Bootstrap error:', error);
-      toast.error('Failed to load profile');
+      toast.error('Error al cargar el perfil');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -104,10 +104,10 @@ export default function DashboardPage() {
       const { data, error } = await classesAPI.listByCoach(selectedGymId, startDate, endDate);
 
       if (error) {
-        console.error('Failed to load classes:', error);
+        console.error('Error al cargar clases:', error);
         setClassError(error as ApiError);
         setClasses([]);
-        toast.error(`Failed to load classes: ${error.message || 'Unknown error'}`);
+        toast.error(`Error al cargar clases: ${error.message || 'Error desconocido'}`);
         return;
       }
 
@@ -115,10 +115,10 @@ export default function DashboardPage() {
       setClasses(data || []);
       setClassError(null);
     } catch (error: any) {
-      console.error('Classes fetch exception:', error);
+      console.error('Excepción al obtener clases:', error);
       setClassError(error);
       setClasses([]);
-      toast.error('Failed to load classes');
+      toast.error('Error al cargar las clases');
     }
   };
 
@@ -138,18 +138,18 @@ export default function DashboardPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Coach Dashboard</h1>
+        <h1>Panel del Entrenador</h1>
         <div className={styles.userInfo}>
           <span>{user?.name}</span>
           <button onClick={handleLogout} className={styles.logoutBtn}>
-            Logout
+            Cerrar sesión
           </button>
         </div>
       </header>
 
       <div className={styles.content}>
         <aside className={styles.sidebar}>
-          <h3>My Gyms</h3>
+          <h3>Mis Gimnasios</h3>
           {gyms.map((gym) => (
             <button
               key={gym.id}
@@ -165,22 +165,22 @@ export default function DashboardPage() {
         <main className={styles.main}>
           <div className={styles.dateNav}>
             <button onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
-              ← Previous
+              ← Anterior
             </button>
-            <h2>{format(selectedDate, 'EEEE, MMM dd')}</h2>
+            <h2>{format(selectedDate, 'EEEE, dd MMM')}</h2>
             <button onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-              Next →
+              Siguiente →
             </button>
           </div>
 
           {classError ? (
             <div className={styles.empty}>
-              <p style={{ color: '#d32f2f' }}>Error loading classes</p>
-              <small>{classError.message || 'Unknown error'}</small>
+              <p style={{ color: '#d32f2f' }}>Error al cargar las clases</p>
+              <small>{classError.message || 'Error desconocido'}</small>
             </div>
           ) : classes.length === 0 ? (
             <div className={styles.empty}>
-              <p>No classes scheduled for this date</p>
+              <p>No hay clases programadas para esta fecha</p>
             </div>
           ) : (
             <div className={styles.classGrid}>
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                   {cls.capacity && (
                     <div className={styles.capacity}>
                       <span>
-                        Capacity: {cls.capacity}
+                        Capacidad: {cls.capacity}
                       </span>
                       <div className={styles.capacityBar}>
                         <div
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                   )}
 
                   <button className={styles.actionBtn}>
-                    Take Attendance
+                    Tomar Asistencia
                   </button>
                 </div>
               ))}
