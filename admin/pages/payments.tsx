@@ -222,7 +222,7 @@ export default function PaymentsPage() {
                           onClick={() => handleRejectTransfer(payment.id)}
                           className={styles.btnDanger}
                         >
-                          Reject
+                          Rechazar
                         </button>
                       </div>
                     )}
@@ -231,7 +231,7 @@ export default function PaymentsPage() {
                         onClick={() => router.push(`/payments/${payment.id}`)}
                         className={styles.btnSmall}
                       >
-                        Details
+                        Detalles
                       </button>
                     )}
                   </td>

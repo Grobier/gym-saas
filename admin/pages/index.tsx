@@ -150,9 +150,9 @@ export default function AdminDashboard() {
       <div className={styles.content}>
         <aside className={styles.sidebar}>
           <nav className={styles.nav}>
-            <h3>Navigation</h3>
+            <h3>Navegación</h3>
             <a href="/" className={styles.navLink + ' ' + styles.active}>
-              Dashboard
+              Panel
             </a>
             <a href="/students" className={styles.navLink}>
               Estudiantes
@@ -226,35 +226,35 @@ export default function AdminDashboard() {
             <h2>Actividad Reciente</h2>
             <div className={styles.activityList}>
               <div className={styles.activityItem}>
-                <span className={styles.activityType}>Payment</span>
+                <span className={styles.activityType}>Pago</span>
                 <span className={styles.activityText}>
-                  John Doe purchased "Unlimited 30 days"
+                  Juan Pérez compró "Ilimitado 30 días"
                 </span>
-                <span className={styles.activityTime}>2 hours ago</span>
+                <span className={styles.activityTime}>Hace 2 horas</span>
               </div>
 
               <div className={styles.activityItem}>
-                <span className={styles.activityType}>Reservation</span>
+                <span className={styles.activityType}>Reserva</span>
                 <span className={styles.activityText}>
-                  Sarah Smith reserved CrossFit 6 AM
+                  María García reservó CrossFit 6 AM
                 </span>
-                <span className={styles.activityTime}>1 hour ago</span>
+                <span className={styles.activityTime}>Hace 1 hora</span>
               </div>
 
               <div className={styles.activityItem}>
-                <span className={styles.activityType}>Membership</span>
+                <span className={styles.activityType}>Membresía</span>
                 <span className={styles.activityText}>
-                  3 memberships expiring this week
+                  3 membresías vencen esta semana
                 </span>
-                <span className={styles.activityTime}>30 minutes ago</span>
+                <span className={styles.activityTime}>Hace 30 minutos</span>
               </div>
 
               <div className={styles.activityItem}>
-                <span className={styles.activityType}>Class</span>
+                <span className={styles.activityType}>Clase</span>
                 <span className={styles.activityText}>
-                  Morning Yoga reached capacity
+                  Yoga Matutino alcanzó capacidad máxima
                 </span>
-                <span className={styles.activityTime}>10 minutes ago</span>
+                <span className={styles.activityTime}>Hace 10 minutos</span>
               </div>
             </div>
           </div>

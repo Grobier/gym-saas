@@ -221,25 +221,25 @@ function AddStudentModal({
   return (
     <div className={styles.modal}>
       <div className={styles.modalContent}>
-        <h2>Add Student</h2>
+        <h2>Agregar Estudiante</h2>
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             type="text"
-            placeholder="Full Name"
+            placeholder="Nombre Completo"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Correo"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
           <input
             type="tel"
-            placeholder="Phone (optional)"
+            placeholder="Teléfono (opcional)"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
@@ -251,10 +251,10 @@ function AddStudentModal({
               disabled={loading}
               className={styles.secondaryBtn}
             >
-              Cancel
+              Cancelar
             </button>
             <button type="submit" disabled={loading} className={styles.primaryBtn}>
-              {loading ? 'Adding...' : 'Add Student'}
+              {loading ? 'Agregando...' : 'Agregar Estudiante'}
             </button>
           </div>
         </form>
