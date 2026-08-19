@@ -151,7 +151,7 @@ export default function AdminDashboard() {
         <aside className={styles.sidebar}>
           <nav className={styles.nav}>
             <h3>Navigation</h3>
-            <a href="/dashboard" className={styles.navLink + ' ' + styles.active}>
+            <a href="/" className={styles.navLink + ' ' + styles.active}>
               Dashboard
             </a>
             <a href="/students" className={styles.navLink}>
@@ -160,17 +160,8 @@ export default function AdminDashboard() {
             <a href="/classes" className={styles.navLink}>
               Classes
             </a>
-            <a href="/memberships" className={styles.navLink}>
-              Memberships
-            </a>
             <a href="/payments" className={styles.navLink}>
               Payments
-            </a>
-            <a href="/reports" className={styles.navLink}>
-              Reports
-            </a>
-            <a href="/settings" className={styles.navLink}>
-              Settings
             </a>
           </nav>
 
