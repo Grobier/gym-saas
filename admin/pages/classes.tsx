@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { classesAPI } from '../lib/supabase-api';
+import { useGymsStore } from '../lib/store';
 
 interface Class {
   id: string;
@@ -18,17 +19,20 @@ export default function ClassesPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+  const selectedGymId = useGymsStore((state) => state.selectedGymId);
 
   useEffect(() => {
-    loadClasses();
-  }, []);
+    if (selectedGymId) {
+      loadClasses();
+    }
+  }, [selectedGymId]);
 
   const loadClasses = async () => {
+    if (!selectedGymId) return;
+
     try {
       setLoading(true);
-      // TODO: Get gymId from context or route
-      const gymId = 'default-gym-id';
-      const { data, error } = await classesAPI.list(gymId);
+      const { data, error } = await classesAPI.list(selectedGymId);
 
       if (error) {
         console.error('Error al cargar clases:', error);
