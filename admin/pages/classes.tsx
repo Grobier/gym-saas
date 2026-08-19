@@ -2,9 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { parseCookies } from 'nookies';
 import toast from 'react-hot-toast';
-import { classesAPI } from '../lib/supabase-api';
-import { useGymsStore } from '../lib/store';
+import { classesAPI, authAPI, gymsAPI, convertSupabaseUser } from '../lib/supabase-api';
+import { useAuthStore, useGymsStore } from '../lib/store';
 
 interface Class {
   id: string;
@@ -19,13 +20,49 @@ export default function ClassesPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const setUser = useAuthStore((state) => state.setUser);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const setGyms = useGymsStore((state) => state.setGyms);
+  const setSelectedGym = useGymsStore((state) => state.setSelectedGym);
+
+  useEffect(() => {
+    verifyAuth();
+  }, []);
 
   useEffect(() => {
     if (selectedGymId) {
       loadClasses();
     }
   }, [selectedGymId]);
+
+  const verifyAuth = async () => {
+    const cookies = parseCookies();
+    if (!cookies.authToken) {
+      router.push('/login');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data } = await authAPI.getCurrentUser();
+      if (data.user) {
+        setUser(convertSupabaseUser(data.user));
+      }
+
+      const { data: gymsData } = await gymsAPI.listMyGyms();
+      if (gymsData && gymsData.length > 0) {
+        setGyms(gymsData);
+        setSelectedGym(gymsData[0].id);
+      }
+    } catch (error) {
+      console.error('Error de autenticación:', error);
+      toast.error('Error de autenticación');
+      router.push('/login');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadClasses = async () => {
     if (!selectedGymId) return;
