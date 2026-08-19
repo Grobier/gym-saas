@@ -43,12 +43,16 @@ export const authAPI = {
 
   getCurrentUser: async () => {
     try {
+      console.log('[AUTH] Getting current user...');
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
+        console.error('[AUTH] Error:', error);
         return { data: { user: null }, error: error.message };
       }
+      console.log('[AUTH] User retrieved:', user?.id);
       return { data: { user }, error: null };
     } catch (error: any) {
+      console.error('[AUTH] Exception:', error);
       return { data: { user: null }, error: error?.message || 'Unknown error' };
     }
   }
@@ -58,11 +62,14 @@ export const authAPI = {
 export const gymsAPI = {
   listMyGyms: async () => {
     try {
+      console.log('[GYMS] Fetching user gyms...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
       if (userError || !user?.id) {
         throw new Error('User not authenticated');
       }
+
+      console.log('[GYMS] Calling get_user_gyms RPC with user:', user.id);
 
       // Use the secure function to get user's gyms
       const { data: accessData, error: accessError } = await supabase.rpc(
@@ -71,29 +78,33 @@ export const gymsAPI = {
       );
 
       if (accessError) {
-        console.error('Error fetching gym access:', accessError);
+        console.error('[GYMS] RPC Error:', accessError);
         throw new Error(`Failed to fetch gym access: ${accessError.message}`);
       }
 
       const gymIds = accessData?.map((a: any) => a.gym_id) || [];
+      console.log('[GYMS] Got gym IDs:', gymIds);
 
       if (gymIds.length === 0) {
+        console.log('[GYMS] No gyms found');
         return { data: [], error: null };
       }
 
+      console.log('[GYMS] Fetching gym details for IDs:', gymIds);
       const { data: gyms, error: gymsError } = await supabase
         .from('gyms')
         .select('*')
         .in('id', gymIds);
 
       if (gymsError) {
-        console.error('Error fetching gyms:', gymsError);
+        console.error('[GYMS] Error fetching gyms:', gymsError);
         throw gymsError;
       }
 
+      console.log('[GYMS] Got gyms:', gyms?.length || 0, 'records');
       return { data: gyms || [], error: null };
     } catch (error: any) {
-      console.error('listMyGyms error:', error);
+      console.error('[GYMS] Exception:', error);
       return {
         data: [],
         error: error?.message || 'Failed to fetch gyms'

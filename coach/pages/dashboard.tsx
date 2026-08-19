@@ -50,23 +50,43 @@ export default function DashboardPage() {
   }, [selectedDate, selectedGymId]);
 
   const bootstrap = async () => {
+    console.log('[DASHBOARD] Bootstrap starting...');
     const cookies = parseCookies();
     if (!cookies.authToken) {
+      console.log('[DASHBOARD] No auth token, redirecting to login');
       router.push('/login');
       return;
     }
 
     try {
-      const { data: userData } = await authAPI.getCurrentUser();
-      setUser(userData.user);
+      console.log('[DASHBOARD] Getting current user...');
+      const { data: userData, error: userError } = await authAPI.getCurrentUser();
 
-      const { data: gymsData } = await gymsAPI.listMyGyms();
-      setGyms(gymsData);
-
-      if (gymsData.length > 0) {
-        setSelectedGym(gymsData[0].id);
+      if (userError) {
+        console.error('[DASHBOARD] User error:', userError);
+        throw new Error(`Auth error: ${userError}`);
       }
-    } catch (error) {
+
+      setUser(userData?.user || null);
+      console.log('[DASHBOARD] User set:', userData?.user?.email);
+
+      console.log('[DASHBOARD] Fetching gyms...');
+      const { data: gymsData, error: gymsError } = await gymsAPI.listMyGyms();
+
+      if (gymsError) {
+        console.error('[DASHBOARD] Gyms error:', gymsError);
+        throw new Error(`Gyms error: ${gymsError}`);
+      }
+
+      console.log('[DASHBOARD] Gyms loaded:', gymsData?.length || 0);
+      setGyms(gymsData || []);
+
+      if (gymsData && gymsData.length > 0) {
+        setSelectedGym(gymsData[0].id);
+        console.log('[DASHBOARD] Selected gym:', gymsData[0].id);
+      }
+    } catch (error: any) {
+      console.error('[DASHBOARD] Bootstrap error:', error);
       toast.error('Failed to load profile');
       router.push('/login');
     } finally {
