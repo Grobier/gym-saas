@@ -1,0 +1,29 @@
+{
+  "name": "platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "next": "^14.0.0",
+    "typescript": "^5.0.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "nookies": "^2.5.2",
+    "react-hot-toast": "^2.4.1",
+    "date-fns": "^2.30.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.40.0",
+    "eslint-config-next": "^14.0.0"
+  }
+}
