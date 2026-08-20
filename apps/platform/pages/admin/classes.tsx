@@ -12,7 +12,9 @@ interface Class {
   id: string;
   name: string;
   discipline_id: string;
-  schedule: string;
+  scheduled_date: string;
+  time_start: string;
+  time_end: string;
   capacity: number;
   enrolled: number;
 }
@@ -119,7 +121,7 @@ export default function ClassesPage() {
                 classes.map((cls) => (
                   <tr key={cls.id}>
                     <td className={styles.name}>{cls.name}</td>
-                    <td>{cls.schedule}</td>
+                    <td>{cls.time_start} - {cls.time_end}</td>
                     <td>{cls.capacity}</td>
                     <td>{cls.enrolled}</td>
                   </tr>
