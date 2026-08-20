@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { format, subDays } from 'date-fns';
 import { parseCookies } from 'nookies';
@@ -151,18 +152,18 @@ export default function AdminDashboard() {
         <aside className={styles.sidebar}>
           <nav className={styles.nav}>
             <h3>Navegación</h3>
-            <a href="/admin" className={styles.navLink + ' ' + styles.active}>
+            <Link href="/admin" className={styles.navLink + ' ' + styles.active}>
               Panel
-            </a>
-            <a href="/admin/students" className={styles.navLink}>
+            </Link>
+            <Link href="/admin/students" className={styles.navLink}>
               Estudiantes
-            </a>
-            <a href="/admin/classes" className={styles.navLink}>
+            </Link>
+            <Link href="/admin/classes" className={styles.navLink}>
               Clases
-            </a>
-            <a href="/admin/payments" className={styles.navLink}>
+            </Link>
+            <Link href="/admin/payments" className={styles.navLink}>
               Pagos
-            </a>
+            </Link>
           </nav>
 
           <div className={styles.gymSelector}>
@@ -228,7 +229,7 @@ export default function AdminDashboard() {
               <div className={styles.activityItem}>
                 <span className={styles.activityType}>Pago</span>
                 <span className={styles.activityText}>
-                  Juan Pérez compró "Ilimitado 30 días"
+                  Juan Pérez compró &quot;Ilimitado 30 días&quot;
                 </span>
                 <span className={styles.activityTime}>Hace 2 horas</span>
               </div>
