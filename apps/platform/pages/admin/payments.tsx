@@ -4,23 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { parseCookies } from 'nookies';
-import { authAPI, paymentsAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, paymentsAPI, convertSupabaseUser, Payment } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
-
-interface Payment {
-  id: string;
-  studentId: string;
-  studentName: string;
-  amount: number;
-  currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'pending_validation';
-  paymentMethod: string;
-  createdAt: string;
-  completedAt?: string;
-  transferProofUrl?: string;
-}
 
 export default function PaymentsPage() {
   const router = useRouter();
