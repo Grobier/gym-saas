@@ -1,9 +1,39 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Initialize Supabase client lazily only when needed (client-side only)
+let supabaseInstance: any = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = {
+  auth: {
+    signInWithPassword: async (credentials: any) => {
+      if (!supabaseInstance) supabaseInstance = initSupabase();
+      return supabaseInstance.auth.signInWithPassword(credentials);
+    },
+    getUser: async () => {
+      if (!supabaseInstance) supabaseInstance = initSupabase();
+      return supabaseInstance.auth.getUser();
+    },
+    signOut: async () => {
+      if (!supabaseInstance) supabaseInstance = initSupabase();
+      return supabaseInstance.auth.signOut();
+    },
+  },
+  from: (table: string) => {
+    if (!supabaseInstance) supabaseInstance = initSupabase();
+    return supabaseInstance.from(table);
+  },
+};
+
+function initSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
+  }
+
+  return createClient(url, key);
+}
 
 // Interfaces
 export interface User {
