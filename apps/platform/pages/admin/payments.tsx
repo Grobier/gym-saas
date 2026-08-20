@@ -68,7 +68,7 @@ export default function PaymentsPage() {
 
     try {
       const { data } = await paymentsAPI.list(selectedGymId, { status: statusFilter });
-      setPayments(data);
+      setPayments(data || []);
     } catch (error) {
       toast.error('Error al cargar pagos');
     } finally {
