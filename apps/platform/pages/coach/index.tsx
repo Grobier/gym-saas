@@ -67,7 +67,9 @@ export default function DashboardPage() {
         throw new Error(`Auth error: ${userError}`);
       }
 
-      setUser(userData?.user || null);
+      if (userData?.user) {
+        setUser(convertSupabaseUser(userData.user));
+      }
       console.log('[DASHBOARD] User set:', userData?.user?.email);
 
       console.log('[DASHBOARD] Fetching gyms...');
