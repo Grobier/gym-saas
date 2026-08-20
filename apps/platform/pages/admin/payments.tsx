@@ -63,38 +63,11 @@ export default function PaymentsPage() {
     }
   };
 
-  const handleApproveTransfer = async (paymentId: string) => {
-    try {
-      const { data } = await paymentsAPI.validateTransfer(
-        selectedGymId!,
-        paymentId,
-        true
-      );
-      setPayments(
-        payments.map((p) => (p.id === paymentId ? { ...p, status: 'completed' } : p))
-      );
-      toast.success('Transferencia aprobada');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al aprobar');
-    }
-  };
-
-  const handleRejectTransfer = async (paymentId: string) => {
-    try {
-      await paymentsAPI.validateTransfer(selectedGymId!, paymentId, false);
-      setPayments(payments.map((p) => (p.id === paymentId ? { ...p, status: 'failed' } : p)));
-      toast.success('Transferencia rechazada');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al rechazar');
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
         return '#10b981';
       case 'pending':
-      case 'pending_validation':
         return '#3b82f6';
       case 'failed':
         return '#ef4444';
@@ -115,8 +88,7 @@ export default function PaymentsPage() {
   const stats = {
     total: payments.length,
     completed: payments.filter((p) => p.status === 'completed').length,
-    pending: payments.filter((p) => p.status === 'pending' || p.status === 'pending_validation')
-      .length,
+    pending: payments.filter((p) => p.status === 'pending').length,
     failed: payments.filter((p) => p.status === 'failed').length,
     revenue: payments
       .filter((p) => p.status === 'completed')
@@ -159,7 +131,6 @@ export default function PaymentsPage() {
             <option value="all">Todos los Pagos</option>
             <option value="completed">Completados</option>
             <option value="pending">Pendientes</option>
-            <option value="pending_validation">Pendiente de Validación</option>
             <option value="failed">Fallidos</option>
           </select>
         </div>
@@ -168,66 +139,35 @@ export default function PaymentsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Estudiante</th>
+                <th>ID Pago</th>
                 <th>Monto</th>
-                <th>Método</th>
+                <th>Moneda</th>
                 <th>Estado</th>
-                <th>Creado</th>
-                <th>Acciones</th>
+                <th>Fecha</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={styles.empty}>
+                  <td colSpan={5} className={styles.empty}>
                     No se encontraron pagos
                   </td>
                 </tr>
               ) : (
                 filteredPayments.map((payment) => (
                   <tr key={payment.id}>
-                    <td>{payment.studentName}</td>
-                    <td>
-                      ${payment.amount.toFixed(0)} {payment.currency}
-                    </td>
-                    <td>{payment.paymentMethod.toUpperCase()}</td>
+                    <td>{payment.id.substring(0, 8)}...</td>
+                    <td>${payment.amount.toFixed(0)}</td>
+                    <td>{payment.currency}</td>
                     <td>
                       <span
                         className={styles.status}
                         style={{ backgroundColor: getStatusColor(payment.status) }}
                       >
-                        {payment.status.replace('_', ' ').toUpperCase()}
+                        {payment.status.toUpperCase()}
                       </span>
                     </td>
-                    <td>{format(new Date(payment.createdAt), 'dd MMM, yyyy')}</td>
-                    <td>
-                      {payment.status === 'pending_validation' && (
-                        <div className={styles.actions}>
-                          <button
-                            onClick={() => handleApproveTransfer(payment.id)}
-                            className={styles.btnSmall}
-                            style={{ backgroundColor: '#10b981' }}
-                          >
-                            Aprobar
-                          </button>
-                          <button
-                            onClick={() => handleRejectTransfer(payment.id)}
-                            className={styles.btnSmall}
-                            style={{ backgroundColor: '#ef4444' }}
-                          >
-                            Rechazar
-                          </button>
-                        </div>
-                      )}
-                      {payment.status === 'pending' && (
-                        <button
-                          onClick={() => router.push(`/admin/payments/${payment.id}`)}
-                          className={styles.btnSmall}
-                        >
-                          Detalles
-                        </button>
-                      )}
-                    </td>
+                    <td>{format(new Date(payment.created_at), 'dd MMM, yyyy')}</td>
                   </tr>
                 ))
               )}
