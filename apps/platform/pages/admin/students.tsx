@@ -67,7 +67,7 @@ export default function StudentsPage() {
 
     try {
       const { data } = await studentsAPI.list(selectedGymId, { search });
-      setStudents(data);
+      setStudents(data || []);
     } catch (error) {
       toast.error('Error al cargar estudiantes');
     } finally {
