@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { parseCookies } from 'nookies';
-import { authAPI, gymsAPI, classesAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, gymsAPI, classesAPI, convertSupabaseUser, userAccessAPI } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
+import RoleSelector from '../../components/RoleSelector';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
@@ -34,6 +35,9 @@ export default function DashboardPage() {
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const activeGymId = useAuthStore((state) => state.activeGymId);
+  const activeRole = useAuthStore((state) => state.activeRole);
+  const setAvailableRoles = useAuthStore((state) => state.setAvailableRoles);
   const gyms = useGymsStore((state) => state.gyms);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
   const setGyms = useGymsStore((state) => state.setGyms);
@@ -50,45 +54,57 @@ export default function DashboardPage() {
   }, [selectedDate, selectedGymId]);
 
   const bootstrap = async () => {
-    console.log('[DASHBOARD] Bootstrap starting...');
+    console.log('[COACH DASHBOARD] Bootstrap starting...');
     const cookies = parseCookies();
     if (!cookies.authToken) {
-      console.log('[DASHBOARD] No auth token, redirecting to login');
+      console.log('[COACH DASHBOARD] No auth token, redirecting to login');
       router.push('/login');
       return;
     }
 
     try {
-      console.log('[DASHBOARD] Getting current user...');
+      console.log('[COACH DASHBOARD] Getting current user...');
       const { data: userData, error: userError } = await authAPI.getCurrentUser();
 
       if (userError) {
-        console.error('[DASHBOARD] User error:', userError);
+        console.error('[COACH DASHBOARD] User error:', userError);
         throw new Error(`Auth error: ${userError}`);
       }
 
       if (userData?.user) {
         setUser(convertSupabaseUser(userData.user));
       }
-      console.log('[DASHBOARD] User set:', userData?.user?.email);
+      console.log('[COACH DASHBOARD] User set:', userData?.user?.email);
 
-      console.log('[DASHBOARD] Fetching gyms...');
+      // Load all available roles for this user
+      console.log('[COACH DASHBOARD] Fetching user roles...');
+      const { data: rolesData } = await userAccessAPI.getMyRoles();
+      if (rolesData) {
+        setAvailableRoles(rolesData);
+        console.log('[COACH DASHBOARD] Roles loaded:', rolesData.length);
+      }
+
+      console.log('[COACH DASHBOARD] Fetching gyms...');
       const { data: gymsData, error: gymsError } = await gymsAPI.listMyGyms();
 
       if (gymsError) {
-        console.error('[DASHBOARD] Gyms error:', gymsError);
+        console.error('[COACH DASHBOARD] Gyms error:', gymsError);
         throw new Error(`Gyms error: ${gymsError}`);
       }
 
-      console.log('[DASHBOARD] Gyms loaded:', gymsData?.length || 0);
+      console.log('[COACH DASHBOARD] Gyms loaded:', gymsData?.length || 0);
       setGyms(gymsData || []);
 
-      if (gymsData && gymsData.length > 0) {
+      // Use activeGymId if set, otherwise use first gym
+      if (activeGymId) {
+        setSelectedGym(activeGymId);
+        console.log('[COACH DASHBOARD] Using active gym:', activeGymId);
+      } else if (gymsData && gymsData.length > 0) {
         setSelectedGym(gymsData[0].id);
-        console.log('[DASHBOARD] Selected gym:', gymsData[0].id);
+        console.log('[COACH DASHBOARD] Selected first gym:', gymsData[0].id);
       }
     } catch (error: any) {
-      console.error('[DASHBOARD] Bootstrap error:', error);
+      console.error('[COACH DASHBOARD] Bootstrap error:', error);
       toast.error('Error al cargar el perfil');
       router.push('/login');
     } finally {
@@ -142,6 +158,7 @@ export default function DashboardPage() {
         <h1>Panel del Entrenador</h1>
         <div className={styles.userInfo}>
           <span>{user?.name}</span>
+          <RoleSelector gymId={selectedGymId} currentRole={activeRole} />
           <button onClick={handleLogout} className={styles.logoutBtn}>
             Cerrar sesión
           </button>

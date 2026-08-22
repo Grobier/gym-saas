@@ -99,6 +99,15 @@ export interface Student {
   totalVisits?: number;
 }
 
+export interface UserAccess {
+  gym_id: string;
+  role: 'admin' | 'coach' | 'student';
+}
+
+export interface GymWithRoles extends Gym {
+  userRoles?: string[];
+}
+
 // Auth APIs
 export const authAPI = {
   async getCurrentUser() {
@@ -107,6 +116,70 @@ export const authAPI = {
 
   async logout() {
     await supabase.auth.signOut();
+  },
+};
+
+// User Access APIs (multiroll support)
+export const userAccessAPI = {
+  async getMyRoles() {
+    const { data, error } = await supabase
+      .from('gym_access')
+      .select('gym_id, role')
+      .order('gym_id');
+
+    if (error) {
+      console.error('Error getting user roles:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as UserAccess[], error: null };
+  },
+
+  async getRolesInGym(gymId: string) {
+    const { data, error } = await supabase
+      .from('gym_access')
+      .select('role')
+      .eq('gym_id', gymId);
+
+    if (error) {
+      console.error('Error getting roles in gym:', error);
+      return { data: null, error };
+    }
+
+    // Extract unique roles
+    const roles = [...new Set((data || []).map((d: any) => d.role))];
+    return { data: roles as string[], error: null };
+  },
+
+  async assignRoleToUser(userId: string, gymId: string, role: 'admin' | 'coach' | 'student') {
+    const { data, error } = await supabase
+      .from('gym_access')
+      .insert([{ user_id: userId, gym_id: gymId, role }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error assigning role:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  },
+
+  async removeRoleFromUser(userId: string, gymId: string, role: 'admin' | 'coach' | 'student') {
+    const { data, error } = await supabase
+      .from('gym_access')
+      .delete()
+      .eq('user_id', userId)
+      .eq('gym_id', gymId)
+      .eq('role', role);
+
+    if (error) {
+      console.error('Error removing role:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
   },
 };
 
