@@ -389,6 +389,61 @@ export const classesAPI = {
 
     return { data, error: null };
   },
+
+  async create(gymId: string, classData: {
+    name: string;
+    discipline_id: string;
+    scheduled_date: string;
+    time_start: string;
+    time_end: string;
+    capacity: number;
+  }) {
+    const { data, error } = await supabase
+      .from('classes')
+      .insert([{
+        gym_id: gymId,
+        ...classData,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating class:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Class, error: null };
+  },
+
+  async update(classId: string, updates: Partial<Class>) {
+    const { data, error } = await supabase
+      .from('classes')
+      .update(updates)
+      .eq('id', classId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating class:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Class, error: null };
+  },
+
+  async delete(classId: string) {
+    const { data, error } = await supabase
+      .from('classes')
+      .delete()
+      .eq('id', classId);
+
+    if (error) {
+      console.error('Error deleting class:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  },
 };
 
 // Attendance APIs (Coach takes attendance)

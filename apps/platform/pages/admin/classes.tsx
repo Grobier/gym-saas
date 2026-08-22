@@ -97,6 +97,12 @@ export default function ClassesPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>Clases</h1>
+        <button
+          onClick={() => router.push('/admin/classes/new')}
+          className={styles.primaryBtn}
+        >
+          + Crear Clase
+        </button>
       </header>
 
       <main className={styles.main}>
