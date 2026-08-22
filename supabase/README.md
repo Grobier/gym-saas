@@ -7,8 +7,17 @@ Si no usas Supabase CLI, aplicar manualmente en Supabase:
 1. Ve a https://app.supabase.com → Tu proyecto
 2. Click en **SQL Editor** (izquierda)
 3. Click en **New Query**
-4. Copia el contenido de `migrations/001_fix_gym_access_rls.sql`
+4. Copia el contenido de `migrations/001_fix_gym_access_rls.sql` (primero)
 5. Ejecuta (Ctrl + Enter o botón Play)
+6. Luego, copia el contenido de `migrations/002_enable_multiroll_per_gym.sql`
+7. Ejecuta
+
+## Orden de Migraciones
+
+Aplica en este orden:
+
+1. ✅ `001_fix_gym_access_rls.sql` - Crea tabla gym_access
+2. ✅ `002_enable_multiroll_per_gym.sql` - Habilita soporte para múltiples roles
 
 ## Migración: 001_fix_gym_access_rls.sql
 
@@ -24,6 +33,23 @@ Si no usas Supabase CLI, aplicar manualmente en Supabase:
 
 **Requisitos previos:**
 - Usuario admin debe tener al menos 1 fila en `gym_access` con role='admin'
+
+## Migración: 002_enable_multiroll_per_gym.sql
+
+**Qué hace:**
+- Cambia restricción UNIQUE de `(user_id, gym_id)` a `(user_id, gym_id, role)`
+- Permite que un usuario tenga múltiples roles en el mismo gimnasio
+- Crea funciones SQL para obtener roles de usuario
+- Actualiza RLS policies
+- Crea índices para performance
+
+**Problema que resuelve:**
+- Permite que admin+coach sea una sola persona
+- No requiere duplicar usuarios/cuentas
+
+**Compatible con:**
+- ✅ Usuarios existentes con rol único (continúan funcionando)
+- ✅ Nuevos usuarios con múltiples roles
 
 ## Verificar después de aplicar
 
