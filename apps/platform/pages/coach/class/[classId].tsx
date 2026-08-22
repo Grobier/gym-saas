@@ -1,31 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
-import { classesAPI } from '../../../lib/supabase-api';
-import { useGymsStore } from '../../../lib/store';
+import { parseCookies } from 'nookies';
+import { classesAPI, reservationsAPI, attendanceAPI, authAPI } from '../../../lib/supabase-api';
+import { useGymsStore, useAuthStore } from '../../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../../styles/dashboard.module.css';
-
-interface Attendance {
-  id: string;
-  reservationId: string;
-  studentId: string;
-  status: 'attended' | 'no_show';
-  checkedInAt?: string;
-  notes?: string;
-}
-
-interface Student {
-  id: string;
-  user: {
-    name: string;
-  };
-  attendance?: Attendance;
-}
 
 interface ClassDetail {
   id: string;
   gym_id: string;
+  name?: string;
   discipline_id?: string;
   scheduled_date?: string;
   time_start?: string;
@@ -33,8 +18,15 @@ interface ClassDetail {
   coaches?: string[];
   status?: string;
   capacity?: number;
-  roster?: any[];
   [key: string]: any;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  attendance_status: 'present' | 'absent' | 'excused' | 'unmarked';
+  notes?: string;
 }
 
 export default function ClassPage() {
@@ -42,51 +34,117 @@ export default function ClassPage() {
   const { classId } = router.query;
 
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
-  const [attendance, setAttendance] = useState<Map<string, Attendance>>(new Map());
+  const [roster, setRoster] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    verifyAuth();
+  }, []);
 
   useEffect(() => {
     if (classId && selectedGymId) {
-      fetchClass();
+      fetchClassData();
     }
   }, [classId, selectedGymId]);
 
-  const fetchClass = async () => {
+  const verifyAuth = async () => {
+    const cookies = parseCookies();
+    if (!cookies.authToken) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      const { data } = await classesAPI.getWithRoster(classId as string);
-      setClassDetail(data);
+      const { data } = await authAPI.getCurrentUser();
+      if (!data.user) {
+        router.push('/login');
+      }
     } catch (error) {
-      toast.error('Error al cargar la clase');
-      router.back();
+      router.push('/login');
+    }
+  };
+
+  const fetchClassData = async () => {
+    try {
+      // Get class details
+      const { data: classData } = await classesAPI.getWithRoster(classId as string);
+      setClassDetail(classData);
+
+      // Get roster (registered students)
+      const { data: rosterData } = await reservationsAPI.getClassRoster(classId as string);
+
+      if (rosterData) {
+        // Get attendance records
+        const { data: attendanceData } = await attendanceAPI.getClassAttendance(classId as string);
+
+        // Build student list with attendance status
+        const students: Student[] = (rosterData || []).map((item: any) => {
+          const attended = attendanceData?.find((a: any) => a.student_id === item.student_id);
+          return {
+            id: item.student_id,
+            name: item.student_name || 'Sin nombre',
+            email: item.student_email || '',
+            attendance_status: attended?.status || 'unmarked',
+            notes: attended?.notes || '',
+          };
+        });
+
+        setRoster(students);
+      }
+    } catch (error: any) {
+      console.error('Error fetching class data:', error);
+      toast.error('Error al cargar datos de la clase');
     } finally {
       setLoading(false);
     }
   };
 
-  const markAttendance = async (
-    reservationId: string,
+  const handleMarkAttendance = async (
     studentId: string,
-    status: 'attended' | 'no_show'
+    status: 'present' | 'absent' | 'excused'
   ) => {
     setSaving(true);
     try {
-      // TODO: Implement attendance marking via API
-      const newAttendance: Attendance = {
-        id: Math.random().toString(),
-        reservationId,
-        studentId,
-        status,
-        checkedInAt: new Date().toISOString(),
-      };
+      await attendanceAPI.markAttendance(classId as string, studentId, status);
 
-      setAttendance((prev) => new Map(prev).set(studentId, newAttendance));
-      toast.success(`Marcado como ${status === 'attended' ? 'presente' : 'ausente'}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al marcar asistencia');
+      // Update local state
+      setRoster((prev) =>
+        prev.map((s) =>
+          s.id === studentId
+            ? { ...s, attendance_status: status }
+            : s
+        )
+      );
+
+      toast.success(`Asistencia marcada como ${status}`);
+    } catch (error) {
+      toast.error('Error al marcar asistencia');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // Guardar todos los cambios de asistencia
+      for (const student of roster) {
+        if (student.attendance_status !== 'unmarked') {
+          await attendanceAPI.markAttendance(
+            classId as string,
+            student.id,
+            student.attendance_status
+          );
+        }
+      }
+      toast.success('Asistencia guardada correctamente');
+      router.back();
+    } catch (error) {
+      toast.error('Error al guardar asistencia');
     } finally {
       setSaving(false);
     }
@@ -97,121 +155,253 @@ export default function ClassPage() {
   }
 
   if (!classDetail) {
-    return <div className={styles.container}>Clase no encontrada</div>;
+    return (
+      <div className={styles.container}>
+        <div className={styles.empty}>
+          <p>Clase no encontrada</p>
+        </div>
+      </div>
+    );
   }
+
+  const unmarkedCount = roster.filter((s) => s.attendance_status === 'unmarked').length;
+  const presentCount = roster.filter((s) => s.attendance_status === 'present').length;
+  const absentCount = roster.filter((s) => s.attendance_status === 'absent').length;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <button onClick={() => router.back()} className={styles.logoutBtn} style={{background: '#6b7280'}}>
-          ← Atrás
-        </button>
         <div>
-          <h1>{classDetail.id}</h1>
-          {classDetail.scheduled_date && (
-            <p style={{color: '#6b7280'}}>{format(new Date(classDetail.scheduled_date), 'EEEE, MMM dd')}</p>
-          )}
-          {classDetail.time_start && classDetail.time_end && (
-            <p style={{color: '#6b7280'}}>
-              {classDetail.time_start} - {classDetail.time_end}
-            </p>
-          )}
+          <h1>Tomar Asistencia</h1>
+          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
+            {classDetail.name || 'Clase'} - {classDetail.scheduled_date ? format(new Date(classDetail.scheduled_date), 'EEEE, dd MMM') : ''}
+            {' '}
+            {classDetail.time_start} - {classDetail.time_end}
+          </p>
         </div>
+        <button onClick={() => router.back()} className={styles.logoutBtn}>
+          ← Volver
+        </button>
       </header>
 
-      <main className={styles.main}>
-        <div className={styles.metricsGrid}>
-          <div className={styles.metricCard}>
-            <h3>Presentes</h3>
-            <p className={styles.metricValue}>
-              {Array.from(attendance.values()).filter((a) => a.status === 'attended').length}
-            </p>
-            <span className={styles.metricLabel}>Asistieron</span>
+      <main className={styles.main} style={{ maxWidth: '900px' }}>
+        {/* Resumen */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '1rem',
+            marginBottom: '2rem',
+          }}
+        >
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: '#f0f8ff',
+              borderRadius: '8px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Estudiantes</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{roster.length}</div>
           </div>
-          <div className={styles.metricCard}>
-            <h3>Ausentes</h3>
-            <p className={styles.metricValue}>
-              {Array.from(attendance.values()).filter((a) => a.status === 'no_show').length}
-            </p>
-            <span className={styles.metricLabel}>No asistieron</span>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: '#f0fff4',
+              borderRadius: '8px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Presentes</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>
+              {presentCount}
+            </div>
           </div>
-          <div className={styles.metricCard}>
-            <h3>Total</h3>
-            <p className={styles.metricValue}>{classDetail.roster?.length || 0}</p>
-            <span className={styles.metricLabel}>Inscritos</span>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: '#ffe8e8',
+              borderRadius: '8px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Ausentes</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ef4444' }}>
+              {absentCount}
+            </div>
+          </div>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: '#fff8e8',
+              borderRadius: '8px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Sin marcar</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#f59e0b' }}>
+              {unmarkedCount}
+            </div>
           </div>
         </div>
 
-        <div className={styles.tableContainer}>
-          <h2>Lista de Asistencia</h2>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Nombre del Estudiante</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {classDetail.roster && classDetail.roster.length > 0 ? (
-                classDetail.roster.map((student) => {
-                  const att = attendance.get(student.id);
-                  return (
+        {/* Tabla de estudiantes */}
+        {roster.length === 0 ? (
+          <div className={styles.empty}>
+            <p>No hay estudiantes registrados en esta clase</p>
+          </div>
+        ) : (
+          <>
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.map((student) => (
                     <tr key={student.id}>
-                      <td className={styles.name}>{student.user.name}</td>
+                      <td className={styles.name}>{student.name}</td>
+                      <td>{student.email}</td>
                       <td>
-                        {att ? (
-                          <span
-                            className={styles.status}
-                            style={{
-                              backgroundColor: att.status === 'attended' ? '#10b981' : '#ef4444',
-                            }}
-                          >
-                            {att.status === 'attended' ? '✓ Asistió' : '✗ No asistió'}
-                          </span>
-                        ) : (
-                          <span className={styles.status} style={{backgroundColor: '#f59e0b'}}>
-                            Pendiente
-                          </span>
-                        )}
+                        <span
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            backgroundColor:
+                              student.attendance_status === 'present'
+                                ? '#d1fae5'
+                                : student.attendance_status === 'absent'
+                                ? '#fee2e2'
+                                : student.attendance_status === 'excused'
+                                ? '#fef3c7'
+                                : '#e5e7eb',
+                            color:
+                              student.attendance_status === 'present'
+                                ? '#059669'
+                                : student.attendance_status === 'absent'
+                                ? '#dc2626'
+                                : student.attendance_status === 'excused'
+                                ? '#d97706'
+                                : '#374151',
+                          }}
+                        >
+                          {student.attendance_status === 'present' && '✓ Presente'}
+                          {student.attendance_status === 'absent' && '✗ Ausente'}
+                          {student.attendance_status === 'excused' && '~ Justificado'}
+                          {student.attendance_status === 'unmarked' && '○ Sin marcar'}
+                        </span>
                       </td>
                       <td>
-                        <div className={styles.actions}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <button
-                            onClick={() => markAttendance(student.id, student.id, 'attended')}
+                            onClick={() => handleMarkAttendance(student.id, 'present')}
                             disabled={saving}
-                            className={styles.btnSmall}
                             style={{
-                              backgroundColor: att?.status === 'attended' ? '#10b981' : '#667eea',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor:
+                                student.attendance_status === 'present' ? '#10b981' : '#e5e7eb',
+                              color:
+                                student.attendance_status === 'present' ? 'white' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
                             }}
                           >
                             Presente
                           </button>
                           <button
-                            onClick={() => markAttendance(student.id, student.id, 'no_show')}
+                            onClick={() => handleMarkAttendance(student.id, 'absent')}
                             disabled={saving}
-                            className={styles.btnSmall}
                             style={{
-                              backgroundColor: att?.status === 'no_show' ? '#ef4444' : '#6b7280',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor:
+                                student.attendance_status === 'absent' ? '#ef4444' : '#e5e7eb',
+                              color:
+                                student.attendance_status === 'absent' ? 'white' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
                             }}
                           >
                             Ausente
                           </button>
+                          <button
+                            onClick={() => handleMarkAttendance(student.id, 'excused')}
+                            disabled={saving}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor:
+                                student.attendance_status === 'excused' ? '#f59e0b' : '#e5e7eb',
+                              color:
+                                student.attendance_status === 'excused' ? 'white' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            Justificado
+                          </button>
                         </div>
                       </td>
                     </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={3} className={styles.empty}>
-                    No hay estudiantes inscritos
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => router.back()}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: 'bold',
+                  opacity: saving ? 0.6 : 1,
+                }}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveAll}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: 'bold',
+                  opacity: saving ? 0.6 : 1,
+                }}
+                disabled={saving}
+              >
+                {saving ? 'Guardando...' : 'Guardar Asistencia'}
+              </button>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

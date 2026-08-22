@@ -22,6 +22,10 @@ export const supabase = {
     if (!supabaseInstance) supabaseInstance = initSupabase();
     return supabaseInstance.from(table);
   },
+  rpc: (functionName: string, params?: any) => {
+    if (!supabaseInstance) supabaseInstance = initSupabase();
+    return supabaseInstance.rpc(functionName, params);
+  },
 };
 
 function initSupabase() {
@@ -106,6 +110,41 @@ export interface UserAccess {
 
 export interface GymWithRoles extends Gym {
   userRoles?: string[];
+}
+
+export interface Attendance {
+  id: string;
+  class_id: string;
+  student_id: string;
+  status: 'present' | 'absent' | 'excused';
+  marked_by: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface Reservation {
+  id: string;
+  class_id: string;
+  student_id: string;
+  status: 'active' | 'cancelled';
+  created_at: string;
+  student_name?: string;
+  student_email?: string;
+}
+
+export interface AttendanceSummary {
+  total_students: number;
+  present_count: number;
+  absent_count: number;
+  excused_count: number;
+  attendance_rate: number;
+}
+
+export interface ClassRoster {
+  student_id: string;
+  student_name: string;
+  student_email: string;
+  status: 'active' | 'cancelled';
 }
 
 // Auth APIs
@@ -349,6 +388,114 @@ export const classesAPI = {
     }
 
     return { data, error: null };
+  },
+};
+
+// Attendance APIs (Coach takes attendance)
+export const attendanceAPI = {
+  async markAttendance(classId: string, studentId: string, status: 'present' | 'absent' | 'excused', notes?: string) {
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert([{ class_id: classId, student_id: studentId, status, notes, marked_by: (await authAPI.getCurrentUser()).data?.user?.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error marking attendance:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Attendance, error: null };
+  },
+
+  async getClassAttendance(classId: string) {
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('class_id', classId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error getting attendance:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Attendance[], error: null };
+  },
+
+  async getAttendanceSummary(classId: string) {
+    const { data, error } = await supabase
+      .rpc('get_attendance_summary', { p_class_id: classId });
+
+    if (error) {
+      console.error('Error getting attendance summary:', error);
+      return { data: null, error };
+    }
+
+    return { data: data?.[0] as AttendanceSummary | null, error: null };
+  },
+};
+
+// Reservations APIs (Student books, Coach views roster)
+export const reservationsAPI = {
+  async createReservation(classId: string, studentId: string) {
+    const { data, error } = await supabase
+      .from('reservations')
+      .insert([{ class_id: classId, student_id: studentId, status: 'active' }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating reservation:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Reservation, error: null };
+  },
+
+  async cancelReservation(classId: string, studentId: string) {
+    const { data, error } = await supabase
+      .from('reservations')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+      .eq('class_id', classId)
+      .eq('student_id', studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error cancelling reservation:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Reservation, error: null };
+  },
+
+  async getClassRoster(classId: string) {
+    const { data, error } = await supabase
+      .rpc('get_class_roster', { p_class_id: classId });
+
+    if (error) {
+      console.error('Error getting class roster:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as ClassRoster[], error: null };
+  },
+
+  async getStudentReservations(studentId: string) {
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error getting reservations:', error);
+      return { data: null, error };
+    }
+
+    return { data: data as Reservation[], error: null };
   },
 };
 
