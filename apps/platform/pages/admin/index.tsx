@@ -176,6 +176,9 @@ export default function AdminDashboard() {
             <Link href="/admin/email-settings" className={styles.navLink}>
               📧 Configuración de Emails
             </Link>
+            <Link href="/admin/analytics" className={styles.navLink}>
+              📊 Análiticas
+            </Link>
           </nav>
 
           <div className={styles.gymSelector}>
