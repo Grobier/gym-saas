@@ -114,12 +114,13 @@ export default function ClassesPage() {
                 <th>Horario</th>
                 <th>Capacidad</th>
                 <th>Inscritos</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {classes.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className={styles.empty}>
+                  <td colSpan={5} className={styles.empty}>
                     No hay clases disponibles
                   </td>
                 </tr>
@@ -130,6 +131,29 @@ export default function ClassesPage() {
                     <td>{cls.time_start} - {cls.time_end}</td>
                     <td>{cls.capacity}</td>
                     <td>{cls.enrolled}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => router.push(`/admin/classes/${cls.id}/edit`)}
+                          className={styles.btnSmall}
+                          style={{ backgroundColor: '#3b82f6' }}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('¿Estás seguro de que deseas eliminar esta clase?')) {
+                              // TODO: Implement delete
+                              toast.loading('Eliminando clase...');
+                            }
+                          }}
+                          className={styles.btnSmall}
+                          style={{ backgroundColor: '#ef4444' }}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
