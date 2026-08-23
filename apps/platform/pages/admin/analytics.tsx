@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  formatter={(value: any) => `$${(Number(value) / 1000).toFixed(0)}k`}
                   labelStyle={{ color: '#000' }}
                 />
                 <Legend />
@@ -317,7 +317,6 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, enrollments }) => `${name} (${enrollments})`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="enrollments"
