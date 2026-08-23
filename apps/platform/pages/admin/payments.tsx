@@ -14,6 +14,7 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [validatingId, setValidatingId] = useState<string | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
@@ -60,6 +61,36 @@ export default function PaymentsPage() {
       toast.error('Error al cargar pagos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleValidatePayment = async (paymentId: string, approved: boolean) => {
+    if (!selectedGymId) return;
+
+    setValidatingId(paymentId);
+
+    try {
+      const { error } = await paymentsAPI.validateTransfer(selectedGymId, paymentId, approved);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.id === paymentId
+            ? { ...p, status: approved ? 'completed' : 'failed' }
+            : p
+        )
+      );
+
+      toast.success(approved ? 'Pago aprobado' : 'Pago rechazado');
+    } catch (error: any) {
+      console.error('Error validating payment:', error);
+      toast.error('Error al procesar pago');
+    } finally {
+      setValidatingId(null);
     }
   };
 
@@ -144,12 +175,13 @@ export default function PaymentsPage() {
                 <th>Moneda</th>
                 <th>Estado</th>
                 <th>Fecha</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className={styles.empty}>
+                  <td colSpan={6} className={styles.empty}>
                     No se encontraron pagos
                   </td>
                 </tr>
@@ -168,6 +200,50 @@ export default function PaymentsPage() {
                       </span>
                     </td>
                     <td>{format(new Date(payment.created_at), 'dd MMM, yyyy')}</td>
+                    <td>
+                      {payment.status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => handleValidatePayment(payment.id, true)}
+                            disabled={validatingId === payment.id}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: validatingId === payment.id ? 'not-allowed' : 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              opacity: validatingId === payment.id ? 0.6 : 1,
+                            }}
+                          >
+                            {validatingId === payment.id ? 'Procesando...' : 'Aprobar'}
+                          </button>
+                          <button
+                            onClick={() => handleValidatePayment(payment.id, false)}
+                            disabled={validatingId === payment.id}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: validatingId === payment.id ? 'not-allowed' : 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              opacity: validatingId === payment.id ? 0.6 : 1,
+                            }}
+                          >
+                            Rechazar
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '0.9rem' }}>
+                          Procesado
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
