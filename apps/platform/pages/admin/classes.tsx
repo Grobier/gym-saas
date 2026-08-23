@@ -19,10 +19,26 @@ interface Class {
   enrolled: number;
 }
 
+interface ClassFilters {
+  search: string;
+  discipline: string;
+  minCapacity: number;
+  sortBy: 'name' | 'date' | 'capacity';
+  sortOrder: 'asc' | 'desc';
+}
+
 export default function ClassesPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<ClassFilters>({
+    search: '',
+    discipline: '',
+    minCapacity: 0,
+    sortBy: 'date',
+    sortOrder: 'asc',
+  });
 
   const setUser = useAuthStore((state) => state.setUser);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
@@ -91,6 +107,41 @@ export default function ClassesPage() {
     }
   };
 
+  const filteredClasses = classes
+    .filter((c) => {
+      const matchesSearch = c.name.toLowerCase().includes(filters.search.toLowerCase());
+      const matchesDiscipline =
+        !filters.discipline || c.discipline_id === filters.discipline;
+      const matchesCapacity = c.capacity >= filters.minCapacity;
+
+      return matchesSearch && matchesDiscipline && matchesCapacity;
+    })
+    .sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (filters.sortBy) {
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'date':
+          aVal = new Date(a.scheduled_date).getTime();
+          bVal = new Date(b.scheduled_date).getTime();
+          break;
+        case 'capacity':
+          aVal = a.capacity;
+          bVal = b.capacity;
+          break;
+      }
+
+      if (aVal < bVal) return filters.sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return filters.sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const disciplines = Array.from(new Set(classes.map((c) => c.discipline_id)));
+
   if (loading) return <div className={styles.container}>Cargando...</div>;
 
   return (
@@ -105,6 +156,163 @@ export default function ClassesPage() {
         </button>
       </header>
 
+      <div className={styles.searchBar} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          className={styles.searchInput}
+          style={{ flex: 1 }}
+        />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: showFilters ? '#007bff' : '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '0.9rem',
+          }}
+        >
+          {showFilters ? '🔽 Filtros' : '📊 Filtros'}
+        </button>
+      </div>
+
+      {showFilters && (
+        <div
+          style={{
+            padding: '1.5rem',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Disciplina
+            </label>
+            <select
+              value={filters.discipline}
+              onChange={(e) => setFilters({ ...filters, discipline: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="">Todas las disciplinas</option>
+              {disciplines.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Capacidad Mínima
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={filters.minCapacity}
+              onChange={(e) =>
+                setFilters({ ...filters, minCapacity: parseInt(e.target.value) || 0 })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Ordenar Por
+            </label>
+            <select
+              value={filters.sortBy}
+              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="name">Nombre</option>
+              <option value="date">Fecha</option>
+              <option value="capacity">Capacidad</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Orden
+            </label>
+            <select
+              value={filters.sortOrder}
+              onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value as any })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="asc">Ascendente</option>
+              <option value="desc">Descendente</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              onClick={() =>
+                setFilters({
+                  search: '',
+                  discipline: '',
+                  minCapacity: 0,
+                  sortBy: 'date',
+                  sortOrder: 'asc',
+                })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+              }}
+            >
+              Limpiar Filtros
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className={styles.main}>
         <div className={styles.tableContainer}>
           <table className={styles.table}>
@@ -118,14 +326,14 @@ export default function ClassesPage() {
               </tr>
             </thead>
             <tbody>
-              {classes.length === 0 ? (
+              {filteredClasses.length === 0 ? (
                 <tr>
                   <td colSpan={5} className={styles.empty}>
                     No hay clases disponibles
                   </td>
                 </tr>
               ) : (
-                classes.map((cls) => (
+                filteredClasses.map((cls) => (
                   <tr key={cls.id}>
                     <td className={styles.name}>{cls.name}</td>
                     <td>{cls.time_start} - {cls.time_end}</td>

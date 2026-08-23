@@ -20,12 +20,25 @@ interface Student {
   totalVisits?: number;
 }
 
+interface FilterOptions {
+  search: string;
+  minReservations: number;
+  sortBy: 'name' | 'createdAt' | 'reservations';
+  sortOrder: 'asc' | 'desc';
+}
+
 export default function StudentsPage() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({
+    search: '',
+    minReservations: 0,
+    sortBy: 'name',
+    sortOrder: 'asc',
+  });
 
   const setUser = useAuthStore((state) => state.setUser);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
@@ -75,10 +88,6 @@ export default function StudentsPage() {
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearch(value);
-  };
-
   const handleAddStudent = async (formData: any) => {
     try {
       const { data } = await studentsAPI.create(selectedGymId!, formData);
@@ -102,11 +111,41 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.user.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredStudents = students
+    .filter((s) => {
+      // Filtro de búsqueda
+      const matchesSearch =
+        s.user.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        s.user.email.toLowerCase().includes(filters.search.toLowerCase());
+
+      // Filtro de reservas mínimas
+      const matchesReservations = (s.activeReservations || 0) >= filters.minReservations;
+
+      return matchesSearch && matchesReservations;
+    })
+    .sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (filters.sortBy) {
+        case 'name':
+          aVal = a.user.name.toLowerCase();
+          bVal = b.user.name.toLowerCase();
+          break;
+        case 'createdAt':
+          aVal = new Date(a.createdAt).getTime();
+          bVal = new Date(b.createdAt).getTime();
+          break;
+        case 'reservations':
+          aVal = a.activeReservations || 0;
+          bVal = b.activeReservations || 0;
+          break;
+      }
+
+      if (aVal < bVal) return filters.sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return filters.sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return <div className={styles.container}>Cargando...</div>;
@@ -121,15 +160,140 @@ export default function StudentsPage() {
         </button>
       </header>
 
-      <div className={styles.searchBar}>
+      <div className={styles.searchBar} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <input
           type="text"
           placeholder="Buscar por nombre o correo..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
           className={styles.searchInput}
+          style={{ flex: 1 }}
         />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: showFilters ? '#007bff' : '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '0.9rem',
+          }}
+        >
+          {showFilters ? '🔽 Filtros' : '📊 Filtros'}
+        </button>
       </div>
+
+      {showFilters && (
+        <div
+          style={{
+            padding: '1.5rem',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Reservas Mínimas
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={filters.minReservations}
+              onChange={(e) =>
+                setFilters({ ...filters, minReservations: parseInt(e.target.value) || 0 })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Ordenar Por
+            </label>
+            <select
+              value={filters.sortBy}
+              onChange={(e) =>
+                setFilters({ ...filters, sortBy: e.target.value as any })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="name">Nombre</option>
+              <option value="createdAt">Fecha de Inscripción</option>
+              <option value="reservations">Reservas Activas</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+              Orden
+            </label>
+            <select
+              value={filters.sortOrder}
+              onChange={(e) =>
+                setFilters({ ...filters, sortOrder: e.target.value as any })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="asc">Ascendente</option>
+              <option value="desc">Descendente</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              onClick={() =>
+                setFilters({
+                  search: '',
+                  minReservations: 0,
+                  sortBy: 'name',
+                  sortOrder: 'asc',
+                })
+              }
+              style={{
+                width: '100%',
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+              }}
+            >
+              Limpiar Filtros
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.tableContainer}>
         <table className={styles.table}>
