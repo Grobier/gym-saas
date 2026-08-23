@@ -170,6 +170,9 @@ export default function AdminDashboard() {
             <Link href="/admin/roles" className={styles.navLink}>
               Roles
             </Link>
+            <Link href="/admin/notifications" className={styles.navLink}>
+              🔔 Notificaciones
+            </Link>
           </nav>
 
           <div className={styles.gymSelector}>
