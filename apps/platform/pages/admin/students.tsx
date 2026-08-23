@@ -79,7 +79,7 @@ export default function StudentsPage() {
     if (!selectedGymId) return;
 
     try {
-      const { data } = await studentsAPI.list(selectedGymId, { search });
+      const { data } = await studentsAPI.list(selectedGymId, {});
       setStudents(data || []);
     } catch (error) {
       toast.error('Error al cargar estudiantes');
