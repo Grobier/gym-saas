@@ -173,6 +173,9 @@ export default function AdminDashboard() {
             <Link href="/admin/notifications" className={styles.navLink}>
               🔔 Notificaciones
             </Link>
+            <Link href="/admin/email-settings" className={styles.navLink}>
+              📧 Configuración de Emails
+            </Link>
           </nav>
 
           <div className={styles.gymSelector}>
