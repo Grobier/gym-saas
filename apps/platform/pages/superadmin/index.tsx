@@ -86,7 +86,8 @@ export default function SuperAdminDashboard() {
       }
 
       // Get subscriptions for each gym
-      const { data: subscriptionsData } = await subscriptionsAPI.list();
+      // TODO: subscriptions table doesn't exist yet - use empty array for now
+      const subscriptionsData: any[] = [];
 
       const gymsWithSubscriptions: GymWithSubscription[] = gymsData.map((gym) => ({
         ...gym,
