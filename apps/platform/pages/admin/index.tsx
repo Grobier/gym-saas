@@ -164,6 +164,12 @@ export default function AdminDashboard() {
             <Link href="/admin/payments" className={styles.navLink}>
               Pagos
             </Link>
+            <Link href="/admin/reports" className={styles.navLink}>
+              Reportes
+            </Link>
+            <Link href="/admin/roles" className={styles.navLink}>
+              Roles
+            </Link>
           </nav>
 
           <div className={styles.gymSelector}>
