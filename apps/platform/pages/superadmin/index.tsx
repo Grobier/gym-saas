@@ -11,6 +11,19 @@ import styles from '../../styles/dashboard.module.css';
 
 interface GymWithSubscription extends Gym {
   subscription?: Subscription | null;
+  studentCount?: number;
+  classCount?: number;
+  monthlyRevenue?: number;
+}
+
+interface ConsolidatedMetrics {
+  totalGyms: number;
+  activeGyms: number;
+  totalStudents: number;
+  totalClasses: number;
+  totalRevenue: number;
+  trialGyms: number;
+  expiredGyms: number;
 }
 
 export default function SuperAdminDashboard() {
@@ -18,6 +31,15 @@ export default function SuperAdminDashboard() {
   const [gyms, setGyms] = useState<GymWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<ConsolidatedMetrics>({
+    totalGyms: 0,
+    activeGyms: 0,
+    totalStudents: 0,
+    totalClasses: 0,
+    totalRevenue: 0,
+    trialGyms: 0,
+    expiredGyms: 0,
+  });
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -66,12 +88,49 @@ export default function SuperAdminDashboard() {
       // Get subscriptions for each gym
       const { data: subscriptionsData } = await subscriptionsAPI.list();
 
-      const gymsWithSubscriptions = gymsData.map((gym) => ({
+      const gymsWithSubscriptions: GymWithSubscription[] = gymsData.map((gym) => ({
         ...gym,
         subscription: subscriptionsData?.find((sub) => sub.gym_id === gym.id) || null,
+        // Mock data - en producción vendría de la API
+        studentCount: Math.floor(Math.random() * 200) + 20,
+        classCount: Math.floor(Math.random() * 30) + 5,
+        monthlyRevenue: Math.floor(Math.random() * 5000000) + 500000,
       }));
 
       setGyms(gymsWithSubscriptions);
+
+      // Calculate consolidated metrics
+      const activeGyms = gymsWithSubscriptions.filter(
+        (g) => g.subscription?.status === 'active'
+      ).length;
+      const trialGyms = gymsWithSubscriptions.filter(
+        (g) => g.subscription?.plan_type === 'trial'
+      ).length;
+      const expiredGyms = gymsWithSubscriptions.filter(
+        (g) => g.subscription?.status === 'expired' || !g.subscription
+      ).length;
+      const totalStudents = gymsWithSubscriptions.reduce(
+        (sum, g) => sum + (g.studentCount || 0),
+        0
+      );
+      const totalClasses = gymsWithSubscriptions.reduce(
+        (sum, g) => sum + (g.classCount || 0),
+        0
+      );
+      const totalRevenue = gymsWithSubscriptions.reduce(
+        (sum, g) => sum + (g.monthlyRevenue || 0),
+        0
+      );
+
+      setMetrics({
+        totalGyms: gymsWithSubscriptions.length,
+        activeGyms,
+        totalStudents,
+        totalClasses,
+        totalRevenue,
+        trialGyms,
+        expiredGyms,
+      });
     } catch (error: any) {
       console.error('Bootstrap error:', error);
       setError(error?.message || 'Error al cargar el perfil');
@@ -103,7 +162,7 @@ export default function SuperAdminDashboard() {
     }
 
     if (subscription.plan_type === 'trial') {
-      return { label: `Trial (${daysRemaining} días)`, color: '#3b82f6', daysRemaining };
+      return { label: `Trial (${daysRemaining}d)`, color: '#3b82f6', daysRemaining };
     }
 
     return { label: 'Activo', color: '#10b981', daysRemaining };
@@ -143,84 +202,212 @@ export default function SuperAdminDashboard() {
       </header>
 
       <main className={styles.main}>
-        <div className={styles.headerSection}>
-          <h2>Gimnasios ({gyms.length})</h2>
-          <div className={styles.stats}>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Total</span>
-              <p className={styles.statValue}>{gyms.length}</p>
+        {/* Métricas Consolidadas */}
+        <section style={{ marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Métricas Consolidadas</h2>
+          <div className={styles.metricsGrid}>
+            <div className={styles.metricCard}>
+              <h3>Total de Gimnasios</h3>
+              <p className={styles.metricValue}>{metrics.totalGyms}</p>
+              <span className={styles.metricLabel}>En el sistema</span>
             </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Activos</span>
-              <p className={styles.statValue}>
-                {gyms.filter((g) => g.subscription?.status === 'active').length}
+
+            <div className={styles.metricCard}>
+              <h3>Activos</h3>
+              <p className={styles.metricValue} style={{ color: '#10b981' }}>
+                {metrics.activeGyms}
+              </p>
+              <span className={styles.metricLabel}>
+                {((metrics.activeGyms / metrics.totalGyms) * 100).toFixed(0)}% activos
+              </span>
+            </div>
+
+            <div className={styles.metricCard}>
+              <h3>Total de Estudiantes</h3>
+              <p className={styles.metricValue}>{metrics.totalStudents.toLocaleString()}</p>
+              <span className={styles.metricLabel}>Todos los gimnasios</span>
+            </div>
+
+            <div className={styles.metricCard}>
+              <h3>Total de Clases</h3>
+              <p className={styles.metricValue}>{metrics.totalClasses}</p>
+              <span className={styles.metricLabel}>Clases programadas</span>
+            </div>
+
+            <div className={styles.metricCard}>
+              <h3>Ingresos Mensuales</h3>
+              <p className={styles.metricValue}>
+                ${(metrics.totalRevenue / 1000000).toFixed(1)}M
+              </p>
+              <span className={styles.metricLabel}>Consolidados</span>
+            </div>
+
+            <div className={styles.metricCard + ' ' + styles.warning}>
+              <h3>Vencidos/Inactivos</h3>
+              <p className={styles.metricValue} style={{ color: '#ef4444' }}>
+                {metrics.expiredGyms}
+              </p>
+              <span className={styles.metricLabel}>Requieren atención</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Resumen de Suscripciones */}
+        <section style={{ marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Estado de Suscripciones</h2>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem',
+            }}
+          >
+            <div
+              style={{
+                padding: '1.5rem',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '8px',
+                borderLeft: '4px solid #10b981',
+              }}
+            >
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Activos</p>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
+                {metrics.activeGyms}
               </p>
             </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Trial</span>
-              <p className={styles.statValue}>
-                {gyms.filter((g) => g.subscription?.plan_type === 'trial').length}
+
+            <div
+              style={{
+                padding: '1.5rem',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '8px',
+                borderLeft: '4px solid #3b82f6',
+              }}
+            >
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Trial</p>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
+                {metrics.trialGyms}
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '1.5rem',
+                backgroundColor: '#fef2f2',
+                borderRadius: '8px',
+                borderLeft: '4px solid #ef4444',
+              }}
+            >
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Expirados</p>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
+                {metrics.expiredGyms}
               </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Ciudad</th>
-                <th>Plan</th>
-                <th>Estado</th>
-                <th>Creado</th>
-                <th>Próximo vencimiento</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gyms.map((gym) => {
-                const status = getSubscriptionStatus(gym.subscription);
-                return (
-                  <tr key={gym.id}>
-                    <td className={styles.gymName}>{gym.name}</td>
-                    <td>{gym.city}</td>
-                    <td>
-                      {gym.subscription ? (
-                        <span className={styles.planBadge}>
-                          {gym.subscription.plan_type === 'trial' ? 'Trial' :
-                           gym.subscription.plan_type === 'monthly' ? 'Mensual' : 'Anual'}
+        {/* Tabla Gimnasios Detallada */}
+        <section>
+          <h2 style={{ marginBottom: '1rem' }}>Gimnasios ({gyms.length})</h2>
+          <div className={styles.tableContainer}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Ciudad</th>
+                  <th>Plan</th>
+                  <th>Estudiantes</th>
+                  <th>Clases</th>
+                  <th>Ingresos/mes</th>
+                  <th>Estado</th>
+                  <th>Vence</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gyms.map((gym) => {
+                  const status = getSubscriptionStatus(gym.subscription);
+                  return (
+                    <tr key={gym.id}>
+                      <td className={styles.name}>{gym.name}</td>
+                      <td>{gym.city || '-'}</td>
+                      <td>
+                        {gym.subscription
+                          ? gym.subscription.plan_type === 'trial'
+                            ? '📋 Trial'
+                            : gym.subscription.plan_type === 'monthly'
+                            ? '📅 Mensual'
+                            : '📅 Anual'
+                          : '-'}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: '#f0f9ff',
+                            borderRadius: '4px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {gym.studentCount}
                         </span>
-                      ) : (
-                        <span className={styles.planBadge}>-</span>
-                      )}
-                    </td>
-                    <td>
-                      <span
-                        className={styles.status}
-                        style={{ backgroundColor: status.color }}
-                      >
-                        {status.label}
-                      </span>
-                    </td>
-                    <td>{format(new Date(gym.created_at), 'dd MMM, yyyy')}</td>
-                    <td>
-                      {gym.subscription ? format(new Date(gym.subscription.end_date), 'dd MMM, yyyy') : '-'}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => router.push(`/superadmin/${gym.id}`)}
-                        className={styles.btnSmall}
-                      >
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: '4px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {gym.classCount}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: '#fef3c7',
+                            borderRadius: '4px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          ${(gym.monthlyRevenue! / 1000).toFixed(0)}k
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={styles.status}
+                          style={{ backgroundColor: status.color }}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+                      <td>
+                        {gym.subscription
+                          ? format(new Date(gym.subscription.end_date), 'dd MMM')
+                          : '-'}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => router.push(`/superadmin/${gym.id}`)}
+                          className={styles.btnSmall}
+                          style={{ backgroundColor: '#3b82f6' }}
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
   );
