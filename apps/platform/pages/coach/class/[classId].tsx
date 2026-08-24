@@ -109,7 +109,11 @@ export default function ClassPage() {
   ) => {
     setSaving(true);
     try {
-      await attendanceAPI.markAttendance(classId as string, studentId, status);
+      if (!user?.id) {
+        toast.error('Usuario no autenticado');
+        return;
+      }
+      await attendanceAPI.markAttendance(classId as string, studentId, status, user.id);
 
       // Update local state
       setRoster((prev) =>
@@ -131,13 +135,18 @@ export default function ClassPage() {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
+      if (!user?.id) {
+        toast.error('Usuario no autenticado');
+        return;
+      }
       // Guardar todos los cambios de asistencia
       for (const student of roster) {
         if (student.attendance_status !== 'unmarked') {
           await attendanceAPI.markAttendance(
             classId as string,
             student.id,
-            student.attendance_status
+            student.attendance_status,
+            user.id
           );
         }
       }

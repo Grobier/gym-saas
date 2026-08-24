@@ -26,6 +26,12 @@ export const supabase = {
     if (!supabaseInstance) supabaseInstance = initSupabase();
     return supabaseInstance.rpc(functionName, params);
   },
+  functions: {
+    invoke: (functionName: string, options?: any) => {
+      if (!supabaseInstance) supabaseInstance = initSupabase();
+      return supabaseInstance.functions.invoke(functionName, options);
+    },
+  },
 };
 
 function initSupabase() {
@@ -93,12 +99,12 @@ export interface Class {
 
 export interface Student {
   id: string;
-  user: {
-    name: string;
-    email: string;
-  };
+  name: string;
+  email: string;
   phone?: string;
-  createdAt: string;
+  user_id?: string;
+  gym_id?: string;
+  created_at?: string;
   activeReservations?: number;
   totalVisits?: number;
 }
@@ -462,10 +468,10 @@ export const classesAPI = {
 
 // Attendance APIs (Coach takes attendance)
 export const attendanceAPI = {
-  async markAttendance(classId: string, studentId: string, status: 'present' | 'absent' | 'excused', notes?: string) {
+  async markAttendance(classId: string, studentId: string, status: 'present' | 'absent' | 'excused', markedBy: string, notes?: string) {
     const { data, error } = await supabase
       .from('attendance')
-      .upsert([{ class_id: classId, student_id: studentId, status, notes, marked_by: (await authAPI.getCurrentUser()).data?.user?.id }])
+      .upsert([{ class_id: classId, student_id: studentId, status, notes, marked_by: markedBy }])
       .select()
       .single();
 
@@ -586,18 +592,64 @@ export const studentsAPI = {
   },
 
   async create(gymId: string, formData: any) {
-    const { data, error } = await supabase
-      .from('students')
-      .insert([{ gym_id: gymId, ...formData }])
-      .select()
-      .single();
+    try {
+      // Try to use Postgres function (create_student_with_auth)
+      const { data, error } = await supabase
+        .rpc('create_student_with_auth', {
+          p_gym_id: gymId,
+          p_name: formData.name,
+          p_email: formData.email,
+          p_phone: formData.phone || null
+        });
 
-    if (error) {
-      console.error('Error creating student:', error);
-      return { data: null, error };
+      if (!error && data && data.length > 0) {
+        const result = data[0];
+        if (!result.error) {
+          // Send invitation email
+          const { temp_password } = result;
+          const { data: gymData } = await gymsAPI.getById(gymId);
+          const gymName = gymData?.name || 'Tu Gimnasio';
+          
+          // Call send-invitation function (non-blocking)
+          supabase.functions.invoke('send-invitation', {
+            body: {
+              email: formData.email,
+              name: formData.name,
+              gym_name: gymName,
+              temp_password: temp_password || 'password_generada',
+            },
+          }).catch((err: any) => {
+            console.warn('Email invitation failed, but student created:', err);
+          });
+
+          return { data: result, error: null };
+        }
+      }
+
+      // Fallback: create student without Auth (temporary)
+      console.warn('Function failed, using fallback: student created without auth');
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('students')
+        .insert([{
+          gym_id: gymId,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          user_id: null
+        }])
+        .select()
+        .single();
+
+      if (fallbackError) {
+        console.error('Error creating student:', fallbackError);
+        return { data: null, error: fallbackError };
+      }
+
+      return { data: fallbackData, error: null };
+    } catch (error: any) {
+      console.error('Error in create:', error);
+      return { data: null, error: error.message };
     }
-
-    return { data, error: null };
   },
 
   async delete(gymId: string, studentId: string) {

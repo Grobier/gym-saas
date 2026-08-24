@@ -3,22 +3,10 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, studentsAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, studentsAPI, convertSupabaseUser, Student } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
-
-interface Student {
-  id: string;
-  user: {
-    name: string;
-    email: string;
-  };
-  phone?: string;
-  createdAt: string;
-  activeReservations?: number;
-  totalVisits?: number;
-}
 
 interface FilterOptions {
   search: string;
@@ -115,8 +103,8 @@ export default function StudentsPage() {
     .filter((s) => {
       // Filtro de búsqueda
       const matchesSearch =
-        s.user.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        s.user.email.toLowerCase().includes(filters.search.toLowerCase());
+        s.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        s.email.toLowerCase().includes(filters.search.toLowerCase());
 
       // Filtro de reservas mínimas
       const matchesReservations = (s.activeReservations || 0) >= filters.minReservations;
@@ -129,8 +117,8 @@ export default function StudentsPage() {
 
       switch (filters.sortBy) {
         case 'name':
-          aVal = a.user.name.toLowerCase();
-          bVal = b.user.name.toLowerCase();
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
           break;
         case 'createdAt':
           aVal = new Date(a.createdAt).getTime();
@@ -318,8 +306,8 @@ export default function StudentsPage() {
             ) : (
               filteredStudents.map((student) => (
                 <tr key={student.id}>
-                  <td className={styles.name}>{student.user.name}</td>
-                  <td>{student.user.email}</td>
+                  <td className={styles.name}>{student.name}</td>
+                  <td>{student.email}</td>
                   <td>{student.phone || '-'}</td>
                   <td>
                     <span className={styles.badge}>{student.activeReservations || 0}</span>
