@@ -161,17 +161,31 @@ export const authAPI = {
 // User Access APIs (multiroll support)
 export const userAccessAPI = {
   async getMyRoles() {
-    const { data, error } = await supabase
-      .from('gym_access')
-      .select('gym_id, role')
-      .order('gym_id');
+    try {
+      // Get current user
+      const { data: authUser } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error('Error getting user roles:', error);
-      return { data: null, error };
+      if (!authUser.user) {
+        return { data: null, error: 'No user logged in' };
+      }
+
+      // Get roles for this user only
+      const { data, error } = await supabase
+        .from('gym_access')
+        .select('gym_id, role')
+        .eq('user_id', authUser.user.id)
+        .order('gym_id');
+
+      if (error) {
+        console.error('Error getting user roles:', error);
+        return { data: null, error };
+      }
+
+      return { data: data as UserAccess[], error: null };
+    } catch (error: any) {
+      console.error('Error in getMyRoles:', error);
+      return { data: null, error: error.message };
     }
-
-    return { data: data as UserAccess[], error: null };
   },
 
   async getRolesInGym(gymId: string) {
