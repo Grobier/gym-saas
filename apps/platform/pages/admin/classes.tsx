@@ -6,6 +6,7 @@ import { parseCookies } from 'nookies';
 import toast from 'react-hot-toast';
 import { classesAPI, authAPI, gymsAPI, convertSupabaseUser } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
+import Sidebar from '../../components/Sidebar';
 import styles from '../../styles/dashboard.module.css';
 
 interface Class {
@@ -41,7 +42,9 @@ export default function ClassesPage() {
   });
 
   const setUser = useAuthStore((state) => state.setUser);
+  const user = useAuthStore((state) => state.user);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const gyms = useGymsStore((state) => state.gyms);
   const setGyms = useGymsStore((state) => state.setGyms);
   const setSelectedGym = useGymsStore((state) => state.setSelectedGym);
 
@@ -81,6 +84,11 @@ export default function ClassesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    authAPI.logout();
+    router.push('/login');
   };
 
   const loadClasses = async () => {
@@ -142,10 +150,31 @@ export default function ClassesPage() {
 
   const disciplines = Array.from(new Set(classes.map((c) => c.discipline_id)));
 
-  if (loading) return <div className={styles.container}>Cargando...</div>;
+  if (loading) return (
+    <div style={{ display: 'flex' }}>
+      <Sidebar
+        role="admin"
+        gyms={gyms}
+        selectedGymId={selectedGymId}
+        onSelectGym={setSelectedGym}
+        userName={user?.name}
+        onLogout={handleLogout}
+      />
+      <div className={styles.container}>Cargando...</div>
+    </div>
+  );
 
   return (
-    <div className={styles.container}>
+    <div style={{ display: 'flex' }}>
+      <Sidebar
+        role="admin"
+        gyms={gyms}
+        selectedGymId={selectedGymId}
+        onSelectGym={setSelectedGym}
+        userName={user?.name}
+        onLogout={handleLogout}
+      />
+      <div className={styles.container}>
       <header className={styles.header}>
         <h1>Clases</h1>
         <button
@@ -369,6 +398,7 @@ export default function ClassesPage() {
           </table>
         </div>
       </main>
+      </div>
     </div>
   );
 }

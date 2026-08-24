@@ -3,8 +3,9 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, studentsAPI, convertSupabaseUser, Student } from '../../lib/supabase-api';
+import { authAPI, studentsAPI, convertSupabaseUser, gymsAPI, Student } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
+import Sidebar from '../../components/Sidebar';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
@@ -29,7 +30,11 @@ export default function StudentsPage() {
   });
 
   const setUser = useAuthStore((state) => state.setUser);
+  const user = useAuthStore((state) => state.user);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const gyms = useGymsStore((state) => state.gyms);
+  const setGyms = useGymsStore((state) => state.setGyms);
+  const setSelectedGym = useGymsStore((state) => state.setSelectedGym);
 
   useEffect(() => {
     verifyAuth();
@@ -40,6 +45,11 @@ export default function StudentsPage() {
       fetchStudents();
     }
   }, [selectedGymId]);
+
+  const handleLogout = () => {
+    authAPI.logout();
+    router.push('/login');
+  };
 
   const verifyAuth = async () => {
     const cookies = parseCookies();
@@ -53,6 +63,15 @@ export default function StudentsPage() {
       const { data } = await authAPI.getCurrentUser();
       if (data.user) {
         setUser(convertSupabaseUser(data.user));
+      }
+
+      // Load gyms if not already loaded
+      if (gyms.length === 0) {
+        const { data: gymsData } = await gymsAPI.listMyGyms();
+        if (gymsData && gymsData.length > 0) {
+          setGyms(gymsData);
+          setSelectedGym(gymsData[0].id);
+        }
       }
     } catch (error) {
       console.error('Auth verification failed:', error);
@@ -150,11 +169,32 @@ export default function StudentsPage() {
     });
 
   if (loading) {
-    return <div className={styles.container}>Cargando...</div>;
+    return (
+      <div style={{ display: 'flex' }}>
+        <Sidebar
+          role="admin"
+          gyms={gyms}
+          selectedGymId={selectedGymId}
+          onSelectGym={setSelectedGym}
+          userName={user?.name}
+          onLogout={handleLogout}
+        />
+        <div className={styles.container}>Cargando...</div>
+      </div>
+    );
   }
 
   return (
-    <div className={styles.container}>
+    <div style={{ display: 'flex' }}>
+      <Sidebar
+        role="admin"
+        gyms={gyms}
+        selectedGymId={selectedGymId}
+        onSelectGym={setSelectedGym}
+        userName={user?.name}
+        onLogout={handleLogout}
+      />
+      <div className={styles.container}>
       <header className={styles.header}>
         <h1>Estudiantes</h1>
         <button onClick={() => setShowModal(true)} className={styles.primaryBtn}>
@@ -357,6 +397,7 @@ export default function StudentsPage() {
           onAdd={handleAddStudent}
         />
       )}
+      </div>
     </div>
   );
 }
