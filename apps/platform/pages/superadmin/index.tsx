@@ -196,7 +196,19 @@ export default function SuperAdminDashboard() {
       <header className={styles.header}>
         <h1>Super Administrador</h1>
         <div className={styles.userInfo} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <RoleSelector gymId={null} currentRole="superadmin" />
+          <button
+            onClick={() => router.push('/role-selector')}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#f5f5f5',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+            }}
+          >
+            🔄 Cambiar Perfil
+          </button>
           <span>{user?.name}</span>
           <button onClick={handleLogout} className={styles.logoutBtn}>
             Cerrar sesión
