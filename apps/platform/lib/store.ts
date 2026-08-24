@@ -44,7 +44,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   activeGymId: null,
   activeRole: null,
   setUser: (user) => set({ user }),
-  setAvailableRoles: (roles) => set({ availableRoles: roles }),
+  setAvailableRoles: (roles) => {
+    set({ availableRoles: roles });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('availableRoles', JSON.stringify(roles));
+    }
+  },
   setActiveGym: (gymId) => {
     set({ activeGymId: gymId });
     if (typeof window !== 'undefined') {
@@ -67,6 +72,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('activeGymId');
       localStorage.removeItem('activeRole');
+      localStorage.removeItem('availableRoles');
     }
   },
 }));
@@ -75,11 +81,21 @@ export const useAuthStore = create<AuthStore>((set) => ({
 if (typeof window !== 'undefined') {
   const activeGymId = localStorage.getItem('activeGymId');
   const activeRole = localStorage.getItem('activeRole');
+  const availableRolesStr = localStorage.getItem('availableRoles');
+
   if (activeGymId) {
     useAuthStore.setState({ activeGymId });
   }
   if (activeRole) {
     useAuthStore.setState({ activeRole });
+  }
+  if (availableRolesStr) {
+    try {
+      const availableRoles = JSON.parse(availableRolesStr);
+      useAuthStore.setState({ availableRoles });
+    } catch (e) {
+      console.error('Failed to parse availableRoles from localStorage:', e);
+    }
   }
 }
 
