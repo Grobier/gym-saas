@@ -5,6 +5,7 @@ import { parseCookies } from 'nookies';
 import { authAPI, gymsAPI, classesAPI, convertSupabaseUser, userAccessAPI } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
 import RoleSelector from '../../components/RoleSelector';
+import Sidebar from '../../components/Sidebar';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
