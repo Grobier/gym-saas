@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
 import { authAPI, gymsAPI, convertSupabaseUser } from '../../lib/supabase-api';
-import { useAuthStore, useGymsStore }
-import Sidebar from '../../components/Sidebar'; from '../../lib/store';
+import { useAuthStore, useGymsStore } from '../../lib/store';
+import Sidebar from '../../components/Sidebar';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
