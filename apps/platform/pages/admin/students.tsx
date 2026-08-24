@@ -11,7 +11,7 @@ import styles from '../../styles/dashboard.module.css';
 interface FilterOptions {
   search: string;
   minReservations: number;
-  sortBy: 'name' | 'createdAt' | 'reservations';
+  sortBy: 'name' | 'created_at' | 'reservations';
   sortOrder: 'asc' | 'desc';
 }
 
@@ -120,9 +120,9 @@ export default function StudentsPage() {
           aVal = a.name.toLowerCase();
           bVal = b.name.toLowerCase();
           break;
-        case 'createdAt':
-          aVal = new Date(a.createdAt).getTime();
-          bVal = new Date(b.createdAt).getTime();
+        case 'created_at':
+          aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
+          bVal = b.created_at ? new Date(b.created_at).getTime() : 0;
           break;
         case 'reservations':
           aVal = a.activeReservations || 0;
@@ -227,7 +227,7 @@ export default function StudentsPage() {
               }}
             >
               <option value="name">Nombre</option>
-              <option value="createdAt">Fecha de Inscripción</option>
+              <option value="created_at">Fecha de Inscripción</option>
               <option value="reservations">Reservas Activas</option>
             </select>
           </div>
@@ -313,7 +313,7 @@ export default function StudentsPage() {
                     <span className={styles.badge}>{student.activeReservations || 0}</span>
                   </td>
                   <td>{student.totalVisits || 0}</td>
-                  <td>{new Date(student.createdAt).toLocaleDateString('es-CL')}</td>
+                  <td>{student.created_at ? new Date(student.created_at).toLocaleDateString('es-CL') : '-'}</td>
                   <td>
                     <div className={styles.actions}>
                       <button
