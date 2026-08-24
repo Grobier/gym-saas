@@ -18,8 +18,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { authAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, convertSupabaseUser, gymsAPI } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
+import Sidebar from '../../components/Sidebar';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
@@ -41,11 +42,20 @@ export default function AnalyticsPage() {
   });
 
   const setUser = useAuthStore((state) => state.setUser);
+  const user = useAuthStore((state) => state.user);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const gyms = useGymsStore((state) => state.gyms);
+  const setGyms = useGymsStore((state) => state.setGyms);
+  const setSelectedGym = useGymsStore((state) => state.setSelectedGym);
 
   useEffect(() => {
     verifyAuth();
   }, []);
+
+  const handleLogout = () => {
+    authAPI.logout();
+    router.push('/login');
+  };
 
   useEffect(() => {
     if (selectedGymId) {
@@ -110,7 +120,12 @@ export default function AnalyticsPage() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   if (loading) {
-    return <div className={styles.container}>Cargando...</div>;
+    return (
+      <div style={{ display: 'flex' }}>
+        <Sidebar role="admin" gyms={gyms} selectedGymId={selectedGymId} onSelectGym={setSelectedGym} userName={user?.name} onLogout={handleLogout} />
+        <div className={styles.container}>Cargando...</div>
+      </div>
+    );
   }
 
   const totalRevenue = data.monthlyRevenue.reduce((sum, d) => sum + d.revenue, 0);
@@ -119,7 +134,9 @@ export default function AnalyticsPage() {
     Math.round(data.attendance.reduce((sum, d) => sum + d.rate, 0) / data.attendance.length) || 0;
 
   return (
-    <div className={styles.container}>
+    <div style={{ display: 'flex' }}>
+      <Sidebar role="admin" gyms={gyms} selectedGymId={selectedGymId} onSelectGym={setSelectedGym} userName={user?.name} onLogout={handleLogout} />
+      <div className={styles.container}>
       <header className={styles.header}>
         <h1>Análiticas</h1>
         <button onClick={() => router.back()} className={styles.logoutBtn}>
@@ -343,6 +360,7 @@ export default function AnalyticsPage() {
           </ul>
         </section>
       </main>
+      </div>
     </div>
   );
 }

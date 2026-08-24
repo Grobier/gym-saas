@@ -3,8 +3,9 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, userAccessAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, userAccessAPI, convertSupabaseUser, gymsAPI } from '../../lib/supabase-api';
 import { useAuthStore, useGymsStore } from '../../lib/store';
+import Sidebar from '../../components/Sidebar';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
 
@@ -24,11 +25,20 @@ export default function RolesPage() {
   const [userRoles, setUserRoles] = useState<Array<{ email: string; role: string }>>([]);
 
   const setUser = useAuthStore((state) => state.setUser);
+  const user = useAuthStore((state) => state.user);
   const selectedGymId = useGymsStore((state) => state.selectedGymId);
+  const gyms = useGymsStore((state) => state.gyms);
+  const setGyms = useGymsStore((state) => state.setGyms);
+  const setSelectedGym = useGymsStore((state) => state.setSelectedGym);
 
   useEffect(() => {
     verifyAuth();
   }, []);
+
+  const handleLogout = () => {
+    authAPI.logout();
+    router.push('/login');
+  };
 
   useEffect(() => {
     if (selectedGymId) {
@@ -124,7 +134,9 @@ export default function RolesPage() {
   }
 
   return (
-    <div className={styles.container}>
+    <div style={{ display: 'flex' }}>
+      <Sidebar role="admin" gyms={gyms} selectedGymId={selectedGymId} onSelectGym={setSelectedGym} userName={user?.name} onLogout={handleLogout} />
+      <div className={styles.container}>
       <header className={styles.header}>
         <h1>Gestión de Roles</h1>
         <button onClick={() => router.back()} className={styles.logoutBtn}>
@@ -326,6 +338,7 @@ export default function RolesPage() {
           </ul>
         </section>
       </main>
+      </div>
     </div>
   );
 }
