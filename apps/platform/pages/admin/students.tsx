@@ -78,12 +78,26 @@ export default function StudentsPage() {
 
   const handleAddStudent = async (formData: any) => {
     try {
-      const { data } = await studentsAPI.create(selectedGymId!, formData);
+      const { data, error } = await studentsAPI.create(selectedGymId!, formData);
+
+      if (error) {
+        console.error('API error:', error);
+        toast.error(error.message || 'Error al crear estudiante');
+        return;
+      }
+
+      if (!data) {
+        console.error('No data returned from API');
+        toast.error('El servidor no retornó datos');
+        return;
+      }
+
       setStudents([data, ...students]);
       setShowModal(false);
       toast.success('Estudiante agregado correctamente');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add student');
+      console.error('Exception in handleAddStudent:', error);
+      toast.error(error.message || 'Error inesperado al crear estudiante');
     }
   };
 
