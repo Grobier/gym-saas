@@ -63,7 +63,9 @@ export default function RoleSelectorPage() {
     setActiveGym(gymId);
     setActiveRole(role);
 
-    if (role === 'admin') {
+    if (role === 'superadmin') {
+      router.push('/superadmin');
+    } else if (role === 'admin') {
       router.push('/admin');
     } else if (role === 'coach') {
       router.push('/coach');
@@ -132,6 +134,7 @@ export default function RoleSelectorPage() {
                         (e.currentTarget.style.backgroundColor = '#007bff')
                       }
                     >
+                      {role === 'superadmin' && '👑 Super Admin'}
                       {role === 'admin' && '👤 Administrador'}
                       {role === 'coach' && '🏋️ Entrenador'}
                       {role === 'student' && '📚 Estudiante'}
