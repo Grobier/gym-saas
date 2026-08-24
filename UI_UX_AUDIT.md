@@ -91,16 +91,28 @@ cas son mock (no datos reales) | MEDIA | TODO en código | Conectar a datos real
 
 ## ACCIONES COMPLETADAS
 
-### Componente Sidebar
+### Componente Sidebar ✅
 ✅ Creado componente Sidebar.tsx reutilizable  
 ✅ Creados estilos sidebar.module.css responsivos  
 ✅ Soporta todos los roles (superadmin, admin, coach, student)  
 ✅ Mobile responsive con hamburger menu  
 
+### Aplicación de Sidebar - ADMIN 🟡
+✅ `/admin/students` - Sidebar aplicado
+✅ `/admin/classes` - Sidebar aplicado
+🟡 `/admin/payments` - En progreso
+⏳ `/admin/reports` - Pendiente
+⏳ `/admin/analytics` - Pendiente
+⏳ `/admin/roles` - Pendiente
+⏳ `/admin/notifications` - Pendiente
+⏳ `/admin/email-settings` - Pendiente
+
 ### Próximos pasos
-⏳ Aplicar Sidebar a todas las páginas de cada rol  
-⏳ Crear Layout wrapper para consistencia  
-⏳ Remover sidebars inline de dashboards  
+⏳ Completar aplicación a todas páginas admin
+⏳ Aplicar Sidebar a coach y student
+⏳ Build y deploy a Vercel
+⏳ Conectar métricas a datos reales (P1)
+⏳ Agregar breadcrumbs (P1)  
 
 ---
 
