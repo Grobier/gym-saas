@@ -6,7 +6,7 @@ import styles from '../styles/sidebar.module.css';
 interface SidebarProps {
   role: 'admin' | 'coach' | 'student' | 'superadmin';
   gyms?: Array<{ id: string; name: string }>;
-  selectedGymId?: string;
+  selectedGymId?: string | null;
   onSelectGym?: (gymId: string) => void;
   userName?: string;
   onLogout?: () => void;
