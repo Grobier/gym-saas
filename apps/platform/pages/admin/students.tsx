@@ -103,8 +103,8 @@ export default function StudentsPage() {
     .filter((s) => {
       // Filtro de búsqueda
       const matchesSearch =
-        s.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        s.email.toLowerCase().includes(filters.search.toLowerCase());
+        (s.name?.toLowerCase() || '').includes(filters.search.toLowerCase()) ||
+        (s.email?.toLowerCase() || '').includes(filters.search.toLowerCase());
 
       // Filtro de reservas mínimas
       const matchesReservations = (s.activeReservations || 0) >= filters.minReservations;
@@ -117,8 +117,8 @@ export default function StudentsPage() {
 
       switch (filters.sortBy) {
         case 'name':
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
+          aVal = (a.name || '').toLowerCase();
+          bVal = (b.name || '').toLowerCase();
           break;
         case 'created_at':
           aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -306,8 +306,8 @@ export default function StudentsPage() {
             ) : (
               filteredStudents.map((student) => (
                 <tr key={student.id}>
-                  <td className={styles.name}>{student.name}</td>
-                  <td>{student.email}</td>
+                  <td className={styles.name}>{student.name || '-'}</td>
+                  <td>{student.email || '-'}</td>
                   <td>{student.phone || '-'}</td>
                   <td>
                     <span className={styles.badge}>{student.activeReservations || 0}</span>

@@ -604,12 +604,19 @@ export const studentsAPI = {
 
       if (!error && data && data.length > 0) {
         const result = data[0];
-        if (!result.error) {
+        if (!result.error && result.student_id) {
           // Send invitation email
-          const { temp_password } = result;
+          const { temp_password, student_id } = result;
           const { data: gymData } = await gymsAPI.getById(gymId);
           const gymName = gymData?.name || 'Tu Gimnasio';
-          
+
+          // Fetch complete student record
+          const { data: completeStudent } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', student_id)
+            .single();
+
           // Call send-invitation function (non-blocking)
           supabase.functions.invoke('send-invitation', {
             body: {
@@ -622,7 +629,7 @@ export const studentsAPI = {
             console.warn('Email invitation failed, but student created:', err);
           });
 
-          return { data: result, error: null };
+          return { data: completeStudent || result, error: null };
         }
       }
 
