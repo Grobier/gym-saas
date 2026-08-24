@@ -8,6 +8,7 @@ import { authAPI, gymsAPI, subscriptionsAPI, convertSupabaseUser, Gym, Subscript
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
+import RoleSelector from '../../components/RoleSelector';
 
 interface GymWithSubscription extends Gym {
   subscription?: Subscription | null;
@@ -194,7 +195,8 @@ export default function SuperAdminDashboard() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>Super Administrador</h1>
-        <div className={styles.userInfo}>
+        <div className={styles.userInfo} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <RoleSelector gymId={null} currentRole="superadmin" />
           <span>{user?.name}</span>
           <button onClick={handleLogout} className={styles.logoutBtn}>
             Cerrar sesión
