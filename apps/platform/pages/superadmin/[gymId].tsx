@@ -3,7 +3,13 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
+import {
+  authAPI,
+  convertSupabaseUser,
+  superadminAPI,
+  SuperAdminGymMember,
+  SuperAdminGymOverview,
+} from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
@@ -13,7 +19,9 @@ export default function SuperAdminGymDetailPage() {
   const router = useRouter();
   const { gymId } = router.query;
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [gym, setGym] = useState<SuperAdminGymOverview | null>(null);
+  const [members, setMembers] = useState<SuperAdminGymMember[]>([]);
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -47,13 +55,21 @@ export default function SuperAdminGymDetailPage() {
 
       setUser(currentUser);
 
-      const { data, error } = await superadminAPI.getGymOverview();
+      const [{ data: overview, error: overviewError }, { data: gymMembers, error: membersError }] =
+        await Promise.all([
+          superadminAPI.getGymOverview(),
+          superadminAPI.getGymMembers(String(gymId)),
+        ]);
 
-      if (error) {
-        throw new Error(typeof error === 'string' ? error : 'No se pudo cargar el gimnasio');
+      if (overviewError) {
+        throw new Error(typeof overviewError === 'string' ? overviewError : 'No se pudo cargar el gimnasio');
       }
 
-      const currentGym = (data || []).find((item) => item.gym_id === gymId);
+      if (membersError) {
+        throw new Error(typeof membersError === 'string' ? membersError : 'No se pudieron cargar los miembros');
+      }
+
+      const currentGym = (overview || []).find((item) => item.gym_id === gymId);
 
       if (!currentGym) {
         toast.error('Gimnasio no encontrado');
@@ -62,12 +78,56 @@ export default function SuperAdminGymDetailPage() {
       }
 
       setGym(currentGym);
-    } catch (error: any) {
-      console.error('Superadmin gym detail error:', error);
-      toast.error(error?.message || 'Error al cargar el gimnasio');
+      setMembers(gymMembers || []);
+    } catch (runtimeError: any) {
+      console.error('Superadmin gym detail error:', runtimeError);
+      toast.error(runtimeError?.message || 'Error al cargar el gimnasio');
       router.push('/superadmin');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    authAPI.logout();
+    router.push('/login');
+  };
+
+  const handleToggleGym = async () => {
+    if (!gym) return;
+
+    const shouldActivate = !gym.is_active;
+    const reason = shouldActivate
+      ? ''
+      : window.prompt(
+          `Razón para bloquear ${gym.gym_name}. Esto afectará admin, coaches y alumnos.`,
+          gym.blocked_reason || ''
+        );
+
+    if (!shouldActivate && reason === null) {
+      return;
+    }
+
+    setUpdatingStatus(true);
+
+    try {
+      const { error } = await superadminAPI.toggleGymStatus(
+        gym.gym_id,
+        shouldActivate,
+        shouldActivate ? undefined : reason || 'Bloqueado por superadministración'
+      );
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el estado');
+      }
+
+      toast.success(shouldActivate ? 'Gimnasio reactivado' : 'Gimnasio bloqueado');
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Toggle gym detail status error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo actualizar el gimnasio');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -91,18 +151,13 @@ export default function SuperAdminGymDetailPage() {
     );
   }
 
-  const handleLogout = () => {
-    authAPI.logout();
-    router.push('/login');
-  };
+  const admins = members.filter((member) => member.role === 'admin');
+  const coaches = members.filter((member) => member.role === 'coach');
+  const students = members.filter((member) => member.role === 'student');
 
   return (
     <div className={saStyles.shell}>
-      <Sidebar
-        role="superadmin"
-        userName={user?.name || user?.email}
-        onLogout={handleLogout}
-      />
+      <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
 
       <main className={saStyles.main}>
         <section className={saStyles.hero}>
@@ -110,57 +165,53 @@ export default function SuperAdminGymDetailPage() {
             <span className={saStyles.eyebrow}>Gym Detail</span>
             <h1 className={saStyles.title}>{gym.gym_name}</h1>
             <p className={saStyles.subtitle}>
-              Vista detallada del estado operativo y comercial del gimnasio dentro del
-              ecosistema moveOS.
+              Control completo de operación, equipo asignado y base estudiantil del gimnasio.
             </p>
           </div>
           <div className={saStyles.heroActions}>
             <button
-              onClick={() => router.push('/superadmin/reports')}
+              onClick={() => router.push('/superadmin')}
               className={saStyles.secondaryAction}
             >
-              Ver Reportes
+              Volver al Dashboard
             </button>
             <button
-              onClick={() => router.push('/superadmin')}
-              className={saStyles.primaryAction}
+              onClick={handleToggleGym}
+              className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
+              disabled={updatingStatus}
             >
-              Volver al Dashboard
+              {updatingStatus
+                ? 'Guardando...'
+                : gym.is_active
+                  ? 'Bloquear Gimnasio'
+                  : 'Activar Gimnasio'}
             </button>
           </div>
         </section>
 
         <section className={saStyles.section}>
-          <div className={saStyles.sectionHeader}>
-            <div>
-              <h2 className={saStyles.sectionTitle}>Resumen Ejecutivo</h2>
-              <p className={saStyles.sectionCopy}>
-                Señales clave para operación, crecimiento y seguimiento comercial.
-              </p>
-            </div>
-          </div>
           <div className={saStyles.metricGrid}>
             <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Ciudad</p>
-              <p className={saStyles.metricValue}>{gym.city || '-'}</p>
-              <div className={saStyles.metricHint}>Ubicación</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Estudiantes</p>
-              <p className={saStyles.metricValue}>{gym.student_count}</p>
-              <div className={saStyles.metricHint}>Registrados</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Clases</p>
-              <p className={saStyles.metricValue}>{gym.class_count}</p>
-              <div className={saStyles.metricHint}>Totales</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Ingresos del Mes</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>
-                ${(gym.monthly_revenue / 1000).toFixed(0)}k
+              <p className={saStyles.metricLabel}>Estado Operativo</p>
+              <p className={`${saStyles.metricValue} ${gym.is_active ? saStyles.toneSuccess : saStyles.toneWarning}`}>
+                {gym.is_active ? 'Activo' : 'Bloqueado'}
               </p>
-              <div className={saStyles.metricHint}>Pagos completados</div>
+              <div className={saStyles.metricHint}>{gym.blocked_reason || 'Sin restricciones'}</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Admins</p>
+              <p className={saStyles.metricValue}>{gym.admin_count}</p>
+              <div className={saStyles.metricHint}>Con acceso de gestión</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Coaches</p>
+              <p className={saStyles.metricValue}>{gym.coach_count}</p>
+              <div className={saStyles.metricHint}>Equipo operativo</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Alumnos</p>
+              <p className={saStyles.metricValue}>{gym.student_count}</p>
+              <div className={saStyles.metricHint}>Base registrada</div>
             </article>
           </div>
         </section>
@@ -199,8 +250,8 @@ export default function SuperAdminGymDetailPage() {
             <div className={saStyles.panel}>
               <div className={saStyles.sectionHeader}>
                 <div>
-                  <h2 className={saStyles.sectionTitle}>Suscripción</h2>
-                  <p className={saStyles.sectionCopy}>Estado comercial actual del gimnasio.</p>
+                  <h2 className={saStyles.sectionTitle}>Comercial</h2>
+                  <p className={saStyles.sectionCopy}>Estado de suscripción e ingresos.</p>
                 </div>
               </div>
               <table className={saStyles.detailList}>
@@ -234,24 +285,75 @@ export default function SuperAdminGymDetailPage() {
         <section className={saStyles.section}>
           <div className={saStyles.summaryGrid}>
             <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
-              <p className={saStyles.summaryCardTitle}>Actividad</p>
-              <p className={saStyles.summaryValue}>{gym.class_count}</p>
-              <p className={saStyles.sectionCopy}>Clases registradas en la vista consolidada.</p>
+              <p className={saStyles.summaryCardTitle}>Administradores</p>
+              <p className={saStyles.summaryValue}>{admins.length}</p>
+              <p className={saStyles.sectionCopy}>Responsables directos del box o sede.</p>
             </article>
             <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentSuccess}`}>
-              <p className={saStyles.summaryCardTitle}>Base de alumnos</p>
-              <p className={saStyles.summaryValue}>{gym.student_count}</p>
-              <p className={saStyles.sectionCopy}>Usuarios estudiantiles asociados al gimnasio.</p>
+              <p className={saStyles.summaryCardTitle}>Coaches</p>
+              <p className={saStyles.summaryValue}>{coaches.length}</p>
+              <p className={saStyles.sectionCopy}>Equipo técnico asociado por rol.</p>
             </article>
             <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentDanger}`}>
-              <p className={saStyles.summaryCardTitle}>Atención comercial</p>
-              <p className={saStyles.summaryValue}>
-                {gym.subscription_status === 'active' ? 'OK' : 'Revisar'}
-              </p>
-              <p className={saStyles.sectionCopy}>
-                Verifica plan, vencimiento y cobros si no está activo.
-              </p>
+              <p className={saStyles.summaryCardTitle}>Alumnos</p>
+              <p className={saStyles.summaryValue}>{students.length}</p>
+              <p className={saStyles.sectionCopy}>Registros estudiantiles consolidados.</p>
             </article>
+          </div>
+        </section>
+
+        <section className={saStyles.section}>
+          <div className={saStyles.sectionHeader}>
+            <div>
+              <h2 className={saStyles.sectionTitle}>Ramas del Gimnasio</h2>
+              <p className={saStyles.sectionCopy}>
+                Personal y alumnos afectados por el estado operativo del gimnasio.
+              </p>
+            </div>
+          </div>
+          <div className={saStyles.panel}>
+            <table className={saStyles.table}>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Rol</th>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Estado</th>
+                  <th>Alta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member, index) => (
+                  <tr key={`${member.role}-${member.user_id || member.email || index}`}>
+                    <td>{member.member_type === 'staff' ? 'Staff' : 'Alumno'}</td>
+                    <td>{member.role}</td>
+                    <td className={saStyles.nameCell}>{member.display_name}</td>
+                    <td>{member.email || '-'}</td>
+                    <td>
+                      <span
+                        className={saStyles.statusPill}
+                        style={{
+                          backgroundColor:
+                            member.status === 'blocked'
+                              ? '#ef4444'
+                              : member.status === 'without-account'
+                                ? '#f59e0b'
+                                : '#10b981',
+                        }}
+                      >
+                        {member.status}
+                      </span>
+                    </td>
+                    <td>
+                      {member.created_at
+                        ? new Date(member.created_at).toLocaleDateString()
+                        : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       </main>

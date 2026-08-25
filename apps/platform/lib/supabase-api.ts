@@ -85,6 +85,20 @@ export interface SuperAdminGymOverview {
   subscription_status: string | null;
   subscription_plan: string | null;
   subscription_end_date: string | null;
+  admin_count: number;
+  coach_count: number;
+  is_active: boolean;
+  blocked_reason: string | null;
+}
+
+export interface SuperAdminGymMember {
+  member_type: 'staff' | 'student';
+  role: 'admin' | 'coach' | 'student';
+  user_id: string | null;
+  email: string | null;
+  display_name: string;
+  status: string;
+  created_at: string | null;
 }
 
 export interface Payment {
@@ -181,26 +195,30 @@ export const authAPI = {
 export const userAccessAPI = {
   async getMyRoles() {
     try {
-      // Get current user
-      const { data: authUser } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('get_my_active_gym_roles');
 
+      if (!error) {
+        return { data: (data || []) as UserAccess[], error: null };
+      }
+
+      // Fallback for environments without the latest migration yet applied.
+      const { data: authUser } = await supabase.auth.getUser();
       if (!authUser.user) {
         return { data: null, error: 'No user logged in' };
       }
 
-      // Get roles for this user only
-      const { data, error } = await supabase
+      const fallback = await supabase
         .from('gym_access')
         .select('gym_id, role')
         .eq('user_id', authUser.user.id)
         .order('gym_id');
 
-      if (error) {
-        console.error('Error getting user roles:', error);
-        return { data: null, error };
+      if (fallback.error) {
+        console.error('Error getting user roles:', fallback.error);
+        return { data: null, error: fallback.error };
       }
 
-      return { data: data as UserAccess[], error: null };
+      return { data: (fallback.data || []) as UserAccess[], error: null };
     } catch (error: any) {
       console.error('Error in getMyRoles:', error);
       return { data: null, error: error.message };
@@ -272,9 +290,22 @@ export const gymsAPI = {
   },
 
   async listMyGyms() {
+    const { data: myRoles, error: rolesError } = await userAccessAPI.getMyRoles();
+
+    if (rolesError) {
+      console.error('Error loading accessible gym roles:', rolesError);
+      return { data: null, error: rolesError };
+    }
+
+    const gymIds = [...new Set((myRoles || []).map((role) => role.gym_id))];
+    if (gymIds.length === 0) {
+      return { data: [], error: null };
+    }
+
     const { data, error } = await supabase
       .from('gyms')
       .select('*')
+      .in('id', gymIds)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -345,6 +376,68 @@ export const superadminAPI = {
     }
 
     return { data: (data || []) as SuperAdminGymOverview[], error: null };
+  },
+
+  async getGymMembers(gymId: string) {
+    const { data, error } = await supabase.rpc('get_superadmin_gym_members', {
+      p_gym_id: gymId,
+    });
+
+    if (error) {
+      console.error('Error loading superadmin gym members:', error);
+      return { data: null, error };
+    }
+
+    return { data: (data || []) as SuperAdminGymMember[], error: null };
+  },
+
+  async toggleGymStatus(gymId: string, isActive: boolean, reason?: string) {
+    const { data, error } = await supabase.rpc('set_gym_active_state', {
+      p_gym_id: gymId,
+      p_is_active: isActive,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      console.error('Error updating gym status:', error);
+      return { data: null, error };
+    }
+
+    return {
+      data: (Array.isArray(data) ? data[0] : data) as {
+        gym_id: string;
+        is_active: boolean;
+        blocked_reason: string | null;
+        blocked_at: string | null;
+      },
+      error: null,
+    };
+  },
+
+  async createGymWithAdmin(payload: {
+    gym_name: string;
+    city?: string;
+    admin_name: string;
+    admin_email: string;
+    admin_password?: string;
+  }) {
+    const { data, error } = await supabase.functions.invoke('manage-gym', {
+      body: {
+        action: 'create_gym',
+        ...payload,
+      },
+    });
+
+    if (error) {
+      console.error('Error creating gym with admin:', error);
+      return { data: null, error };
+    }
+
+    if (data?.error) {
+      return { data: null, error: data.error };
+    }
+
+    return { data, error: null };
   },
 };
 

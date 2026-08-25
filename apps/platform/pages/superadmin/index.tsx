@@ -4,7 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
 import { format } from 'date-fns';
-import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
+import {
+  authAPI,
+  convertSupabaseUser,
+  superadminAPI,
+  SuperAdminGymOverview,
+} from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
@@ -12,7 +17,8 @@ import saStyles from '../../styles/superadmin.module.css';
 
 interface ConsolidatedMetrics {
   totalGyms: number;
-  activeGyms: number;
+  operationalGyms: number;
+  blockedGyms: number;
   totalStudents: number;
   totalClasses: number;
   totalRevenue: number;
@@ -20,14 +26,34 @@ interface ConsolidatedMetrics {
   expiredGyms: number;
 }
 
+interface CreateGymFormState {
+  gym_name: string;
+  city: string;
+  admin_name: string;
+  admin_email: string;
+  admin_password: string;
+}
+
+const initialCreateGymState: CreateGymFormState = {
+  gym_name: '',
+  city: '',
+  admin_name: '',
+  admin_email: '',
+  admin_password: '',
+};
+
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creatingGym, setCreatingGym] = useState(false);
+  const [updatingGymId, setUpdatingGymId] = useState<string | null>(null);
+  const [createGymForm, setCreateGymForm] = useState<CreateGymFormState>(initialCreateGymState);
   const [metrics, setMetrics] = useState<ConsolidatedMetrics>({
     totalGyms: 0,
-    activeGyms: 0,
+    operationalGyms: 0,
+    blockedGyms: 0,
     totalStudents: 0,
     totalClasses: 0,
     totalRevenue: 0,
@@ -75,42 +101,38 @@ export default function SuperAdminDashboard() {
         console.error('Gym access error:', gymsError);
         setError(`Unable to load gyms: ${gymsError}`);
         toast.error('No se pudieron cargar los gimnasios. Por favor intenta de nuevo.');
-        setLoading(false);
         return;
       }
 
-      if (!gymsData || gymsData.length === 0) {
-        setError('No hay gimnasios en el sistema.');
-        setLoading(false);
-        return;
-      }
+      const overview = gymsData || [];
+      setGyms(overview);
 
-      setGyms(gymsData);
-
-      const activeGyms = gymsData.filter((g) => g.subscription_status === 'active').length;
-      const trialGyms = gymsData.filter(
+      const operationalGyms = overview.filter((g) => g.is_active).length;
+      const blockedGyms = overview.filter((g) => !g.is_active).length;
+      const trialGyms = overview.filter(
         (g) => g.subscription_status === 'active' && g.subscription_plan === 'trial'
       ).length;
-      const expiredGyms = gymsData.filter(
+      const expiredGyms = overview.filter(
         (g) => g.subscription_status === 'expired' || g.subscription_status === 'cancelled'
       ).length;
-      const totalStudents = gymsData.reduce((sum, g) => sum + (g.student_count || 0), 0);
-      const totalClasses = gymsData.reduce((sum, g) => sum + (g.class_count || 0), 0);
-      const totalRevenue = gymsData.reduce((sum, g) => sum + (g.monthly_revenue || 0), 0);
+      const totalStudents = overview.reduce((sum, g) => sum + (g.student_count || 0), 0);
+      const totalClasses = overview.reduce((sum, g) => sum + (g.class_count || 0), 0);
+      const totalRevenue = overview.reduce((sum, g) => sum + (g.monthly_revenue || 0), 0);
 
       setMetrics({
-        totalGyms: gymsData.length,
-        activeGyms,
+        totalGyms: overview.length,
+        operationalGyms,
+        blockedGyms,
         totalStudents,
         totalClasses,
         totalRevenue,
         trialGyms,
         expiredGyms,
       });
-    } catch (error: any) {
-      console.error('Bootstrap error:', error);
-      setError(error?.message || 'Error al cargar el perfil');
-      toast.error(error?.message || 'Error al cargar el perfil');
+    } catch (runtimeError: any) {
+      console.error('Bootstrap error:', runtimeError);
+      setError(runtimeError?.message || 'Error al cargar el perfil');
+      toast.error(runtimeError?.message || 'Error al cargar el perfil');
       router.push('/login');
     } finally {
       setLoading(false);
@@ -133,6 +155,96 @@ export default function SuperAdminDashboard() {
     return { label: 'Activo', color: '#10b981' };
   };
 
+  const handleCreateGymInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+    setCreateGymForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCreateGym = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!createGymForm.gym_name || !createGymForm.admin_name || !createGymForm.admin_email) {
+      toast.error('Completa nombre del gimnasio, nombre del administrador y correo.');
+      return;
+    }
+
+    setCreatingGym(true);
+
+    try {
+      const { data, error: creationError } = await superadminAPI.createGymWithAdmin({
+        gym_name: createGymForm.gym_name,
+        city: createGymForm.city,
+        admin_name: createGymForm.admin_name,
+        admin_email: createGymForm.admin_email,
+        admin_password: createGymForm.admin_password || undefined,
+      });
+
+      if (creationError) {
+        throw new Error(typeof creationError === 'string' ? creationError : 'No se pudo crear el gimnasio');
+      }
+
+      toast.success(
+        data?.temp_password
+          ? `Gimnasio creado. Password temporal del admin: ${data.temp_password}`
+          : 'Gimnasio y administrador creados'
+      );
+
+      setCreateGymForm(initialCreateGymState);
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Create gym error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo crear el gimnasio');
+    } finally {
+      setCreatingGym(false);
+    }
+  };
+
+  const handleToggleGym = async (gym: SuperAdminGymOverview) => {
+    const shouldActivate = !gym.is_active;
+    const reason = shouldActivate
+      ? ''
+      : window.prompt(
+          `Razón para bloquear ${gym.gym_name}. Este bloqueo afectará admin, coaches y alumnos.`,
+          gym.blocked_reason || ''
+        );
+
+    if (!shouldActivate && reason === null) {
+      return;
+    }
+
+    setUpdatingGymId(gym.gym_id);
+
+    try {
+      const { error: updateError } = await superadminAPI.toggleGymStatus(
+        gym.gym_id,
+        shouldActivate,
+        shouldActivate ? undefined : reason || 'Bloqueado por superadministración'
+      );
+
+      if (updateError) {
+        throw new Error(typeof updateError === 'string' ? updateError : 'No se pudo actualizar el gimnasio');
+      }
+
+      toast.success(
+        shouldActivate
+          ? `${gym.gym_name} reactivado`
+          : `${gym.gym_name} bloqueado correctamente`
+      );
+
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Toggle gym status error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo actualizar el gimnasio');
+    } finally {
+      setUpdatingGymId(null);
+    }
+  };
+
   if (error) {
     return (
       <div className={saStyles.shell}>
@@ -150,7 +262,7 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  if (loading || gyms.length === 0) {
+  if (loading) {
     return (
       <div className={saStyles.shell}>
         <div className={saStyles.main}>
@@ -162,20 +274,16 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className={saStyles.shell}>
-      <Sidebar
-        role="superadmin"
-        userName={user?.name || user?.email}
-        onLogout={handleLogout}
-      />
+      <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
 
       <main className={saStyles.main}>
         <section className={saStyles.hero}>
           <div>
-            <span className={saStyles.eyebrow}>Platform View</span>
+            <span className={saStyles.eyebrow}>Platform Control</span>
             <h1 className={saStyles.title}>Super Administrador</h1>
             <p className={saStyles.subtitle}>
-              Vista consolidada de gimnasios, suscripciones y métricas globales con una
-              superficie de control minimalista inspirada en Apple.
+              Opera la red completa: alta de gimnasios, creación de administradores y
+              activación o bloqueo operativo de cada sede.
             </p>
           </div>
           <div className={saStyles.heroActions}>
@@ -198,7 +306,9 @@ export default function SuperAdminDashboard() {
           <div className={saStyles.sectionHeader}>
             <div>
               <h2 className={saStyles.sectionTitle}>Métricas Consolidadas</h2>
-              <p className={saStyles.sectionCopy}>Pulso general de la red conectado a Supabase.</p>
+              <p className={saStyles.sectionCopy}>
+                Visión de operación, base de usuarios y salud comercial.
+              </p>
             </div>
           </div>
           <div className={saStyles.metricGrid}>
@@ -208,11 +318,18 @@ export default function SuperAdminDashboard() {
               <div className={saStyles.metricHint}>En el sistema</div>
             </article>
             <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Activos</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneSuccess}`}>{metrics.activeGyms}</p>
-              <div className={saStyles.metricHint}>
-                {((metrics.activeGyms / metrics.totalGyms) * 100).toFixed(0)}% activos
-              </div>
+              <p className={saStyles.metricLabel}>Operativos</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneSuccess}`}>
+                {metrics.operationalGyms}
+              </p>
+              <div className={saStyles.metricHint}>Con acceso habilitado</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Bloqueados</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>
+                {metrics.blockedGyms}
+              </p>
+              <div className={saStyles.metricHint}>Sin acceso operativo</div>
             </article>
             <article className={saStyles.metricCard}>
               <p className={saStyles.metricLabel}>Total de Estudiantes</p>
@@ -231,11 +348,114 @@ export default function SuperAdminDashboard() {
               </p>
               <div className={saStyles.metricHint}>Consolidados</div>
             </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Vencidos/Inactivos</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>{metrics.expiredGyms}</p>
-              <div className={saStyles.metricHint}>Requieren atención</div>
-            </article>
+          </div>
+        </section>
+
+        <section className={saStyles.section}>
+          <div className={saStyles.controlGrid}>
+            <div className={saStyles.formCard}>
+              <div className={saStyles.sectionHeader}>
+                <div>
+                  <h2 className={saStyles.sectionTitle}>Alta de Gimnasio</h2>
+                  <p className={saStyles.sectionCopy}>
+                    Crea la sede y deja su cuenta administradora operativa desde el inicio.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleCreateGym} className={saStyles.formStack}>
+                <div className={saStyles.fieldGrid}>
+                  <label className={saStyles.field}>
+                    <span>Nombre del gym / box</span>
+                    <input
+                      name="gym_name"
+                      value={createGymForm.gym_name}
+                      onChange={handleCreateGymInputChange}
+                      className={saStyles.input}
+                      placeholder="CrossFit Central"
+                      disabled={creatingGym}
+                    />
+                  </label>
+                  <label className={saStyles.field}>
+                    <span>Ciudad</span>
+                    <input
+                      name="city"
+                      value={createGymForm.city}
+                      onChange={handleCreateGymInputChange}
+                      className={saStyles.input}
+                      placeholder="Santiago"
+                      disabled={creatingGym}
+                    />
+                  </label>
+                </div>
+
+                <div className={saStyles.fieldGrid}>
+                  <label className={saStyles.field}>
+                    <span>Administrador</span>
+                    <input
+                      name="admin_name"
+                      value={createGymForm.admin_name}
+                      onChange={handleCreateGymInputChange}
+                      className={saStyles.input}
+                      placeholder="Nombre del administrador"
+                      disabled={creatingGym}
+                    />
+                  </label>
+                  <label className={saStyles.field}>
+                    <span>Correo admin</span>
+                    <input
+                      name="admin_email"
+                      type="email"
+                      value={createGymForm.admin_email}
+                      onChange={handleCreateGymInputChange}
+                      className={saStyles.input}
+                      placeholder="admin@gym.com"
+                      disabled={creatingGym}
+                    />
+                  </label>
+                </div>
+
+                <label className={saStyles.field}>
+                  <span>Password temporal opcional</span>
+                  <input
+                    name="admin_password"
+                    value={createGymForm.admin_password}
+                    onChange={handleCreateGymInputChange}
+                    className={saStyles.input}
+                    placeholder="Si se deja vacío, se genera automáticamente"
+                    disabled={creatingGym}
+                  />
+                </label>
+
+                <div className={saStyles.actionRow}>
+                  <button
+                    type="button"
+                    onClick={() => setCreateGymForm(initialCreateGymState)}
+                    className={saStyles.secondaryAction}
+                    disabled={creatingGym}
+                  >
+                    Limpiar
+                  </button>
+                  <button type="submit" className={saStyles.primaryAction} disabled={creatingGym}>
+                    {creatingGym ? 'Creando...' : 'Crear Gym + Admin'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
+              <p className={saStyles.summaryCardTitle}>Operación de Plataforma</p>
+              <p className={saStyles.summaryValue}>{metrics.operationalGyms}</p>
+              <p className={saStyles.sectionCopy}>
+                El bloqueo de un gimnasio corta el acceso operativo de admin, coaches y alumnos
+                asociados al contexto de esa sede.
+              </p>
+              <div className={saStyles.noticeList}>
+                <span>Alta centralizada de gimnasios</span>
+                <span>Creación inmediata de cuenta admin</span>
+                <span>Bloqueo / reactivación por sede</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -249,7 +469,7 @@ export default function SuperAdminDashboard() {
           <div className={saStyles.summaryGrid}>
             <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentSuccess}`}>
               <p className={saStyles.summaryCardTitle}>Activos</p>
-              <p className={saStyles.summaryValue}>{metrics.activeGyms}</p>
+              <p className={saStyles.summaryValue}>{metrics.operationalGyms}</p>
             </article>
             <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
               <p className={saStyles.summaryCardTitle}>Trial</p>
@@ -265,7 +485,7 @@ export default function SuperAdminDashboard() {
         <section className={saStyles.section}>
           <div className={saStyles.sectionHeader}>
             <div>
-              <h2 className={saStyles.sectionTitle}>Gimnasios</h2>
+              <h2 className={saStyles.sectionTitle}>Directorio de Gimnasios</h2>
               <p className={saStyles.sectionCopy}>{gyms.length} registros visibles.</p>
             </div>
           </div>
@@ -274,12 +494,11 @@ export default function SuperAdminDashboard() {
               <thead>
                 <tr>
                   <th>Nombre</th>
-                  <th>Ciudad</th>
+                  <th>Operación</th>
+                  <th>Equipo</th>
                   <th>Plan</th>
-                  <th>Estudiantes</th>
-                  <th>Clases</th>
                   <th>Ingresos/Mes</th>
-                  <th>Estado</th>
+                  <th>Estado Comercial</th>
                   <th>Vence</th>
                   <th>Acciones</th>
                 </tr>
@@ -287,31 +506,82 @@ export default function SuperAdminDashboard() {
               <tbody>
                 {gyms.map((gym) => {
                   const status = getSubscriptionStatus(gym);
+                  const operationLabel = gym.is_active ? 'Operativo' : 'Bloqueado';
+                  const operationColor = gym.is_active ? '#10b981' : '#ef4444';
+
                   return (
                     <tr key={gym.gym_id}>
-                      <td className={saStyles.nameCell}>{gym.gym_name}</td>
-                      <td>{gym.city || '-'}</td>
+                      <td className={saStyles.nameCell}>
+                        <div>{gym.gym_name}</div>
+                        <div className={saStyles.microCopy}>{gym.city || 'Sin ciudad'}</div>
+                      </td>
+                      <td>
+                        <span
+                          className={saStyles.statusPill}
+                          style={{ backgroundColor: operationColor }}
+                        >
+                          {operationLabel}
+                        </span>
+                        {gym.blocked_reason && (
+                          <div className={saStyles.microCopy}>{gym.blocked_reason}</div>
+                        )}
+                      </td>
+                      <td>
+                        <div className={saStyles.inlineMetricRow}>
+                          <span className={`${saStyles.pill} ${saStyles.pillBlue}`}>
+                            {gym.admin_count} admin
+                          </span>
+                          <span className={`${saStyles.pill} ${saStyles.pillGreen}`}>
+                            {gym.coach_count} coach
+                          </span>
+                          <span className={`${saStyles.pill} ${saStyles.pillAmber}`}>
+                            {gym.student_count} alumno
+                          </span>
+                        </div>
+                      </td>
                       <td>
                         {gym.subscription_plan
                           ? gym.subscription_plan === 'trial'
                             ? 'Trial'
                             : gym.subscription_plan === 'monthly'
-                            ? 'Mensual'
-                            : 'Anual'
+                              ? 'Mensual'
+                              : 'Anual'
                           : '-'}
                       </td>
-                      <td><span className={`${saStyles.pill} ${saStyles.pillBlue}`}>{gym.student_count}</span></td>
-                      <td><span className={`${saStyles.pill} ${saStyles.pillGreen}`}>{gym.class_count}</span></td>
-                      <td><span className={`${saStyles.pill} ${saStyles.pillAmber}`}>${(gym.monthly_revenue / 1000).toFixed(0)}k</span></td>
-                      <td><span className={saStyles.statusPill} style={{ backgroundColor: status.color }}>{status.label}</span></td>
-                      <td>{gym.subscription_end_date ? format(new Date(gym.subscription_end_date), 'dd MMM') : '-'}</td>
+                      <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
                       <td>
-                        <button
-                          onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
-                          className={saStyles.secondaryAction}
+                        <span
+                          className={saStyles.statusPill}
+                          style={{ backgroundColor: status.color }}
                         >
-                          Ver
-                        </button>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td>
+                        {gym.subscription_end_date
+                          ? format(new Date(gym.subscription_end_date), 'dd MMM')
+                          : '-'}
+                      </td>
+                      <td>
+                        <div className={saStyles.inlineActions}>
+                          <button
+                            onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
+                            className={saStyles.secondaryAction}
+                          >
+                            Ver
+                          </button>
+                          <button
+                            onClick={() => handleToggleGym(gym)}
+                            className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
+                            disabled={updatingGymId === gym.gym_id}
+                          >
+                            {updatingGymId === gym.gym_id
+                              ? 'Guardando...'
+                              : gym.is_active
+                                ? 'Bloquear'
+                                : 'Activar'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

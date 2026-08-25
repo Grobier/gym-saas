@@ -93,6 +93,14 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+.primaryAction:disabled,
+.secondaryAction:disabled,
+.dangerAction:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .primaryAction {
   color: white;
   background: linear-gradient(135deg, #111827 0%, #334155 100%);
@@ -106,8 +114,22 @@
   box-shadow: 0 14px 24px rgba(15, 23, 42, 0.07);
 }
 
+.dangerAction {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.84rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow: 0 16px 30px rgba(185, 28, 28, 0.18);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
 .primaryAction:hover,
-.secondaryAction:hover {
+.secondaryAction:hover,
+.dangerAction:hover {
   transform: translateY(-1px);
 }
 
@@ -245,6 +267,94 @@
   -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
+.controlGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1rem;
+}
+
+.formCard {
+  padding: 1.25rem;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 18px 36px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.formStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #617287;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  padding: 0.92rem 1rem;
+  font-size: 0.95rem;
+  color: #14253d;
+  background: rgba(255, 255, 255, 0.7);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+}
+
+.actionRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.noticeList {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.6rem;
+  color: #42526d;
+  font-size: 0.92rem;
+}
+
+.noticeList span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.noticeList span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
 .table {
   width: 100%;
   border-collapse: separate;
@@ -309,6 +419,18 @@
   color: white;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.inlineMetricRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .progressTrack {
@@ -386,6 +508,12 @@
   font-weight: 600;
 }
 
+.microCopy {
+  margin-top: 0.35rem;
+  font-size: 0.84rem;
+  color: #738299;
+}
+
 .emptyState {
   padding: 3rem 2rem;
   border-radius: 28px;
@@ -399,6 +527,7 @@
 }
 
 @media (max-width: 1100px) {
+  .controlGrid,
   .summaryGrid,
   .detailGrid {
     grid-template-columns: 1fr;
@@ -426,6 +555,20 @@
   .metricGrid,
   .summaryGrid {
     grid-template-columns: 1fr;
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionRow,
+  .inlineActions {
+    width: 100%;
+  }
+
+  .actionRow button,
+  .inlineActions button {
+    flex: 1 1 auto;
   }
 
   .table {
