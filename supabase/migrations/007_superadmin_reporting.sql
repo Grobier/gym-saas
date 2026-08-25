@@ -30,60 +30,179 @@ DECLARE
   g RECORD;
   has_payments BOOLEAN := to_regclass('public.payments') IS NOT NULL;
   has_subscriptions BOOLEAN := to_regclass('public.subscriptions') IS NOT NULL;
+  has_gym_city BOOLEAN := EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'gyms'
+      AND column_name = 'city'
+  );
+  has_payment_date BOOLEAN := EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payments'
+      AND column_name = 'payment_date'
+  );
+  has_payment_created_at BOOLEAN := EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payments'
+      AND column_name = 'created_at'
+  );
 BEGIN
   IF NOT is_superadmin() THEN
     RAISE EXCEPTION 'Forbidden';
   END IF;
 
-  FOR g IN
-    SELECT id, name, city, created_at
-    FROM gyms
-    ORDER BY created_at DESC
-  LOOP
-    gym_id := g.id;
-    gym_name := g.name;
-    city := g.city;
-    created_at := g.created_at;
+  IF has_gym_city THEN
+    FOR g IN
+      SELECT
+        gyms.id,
+        gyms.name,
+        gyms.city,
+        gyms.created_at AS gym_created_at
+      FROM gyms
+      ORDER BY gyms.created_at DESC
+    LOOP
+      gym_id := g.id;
+      gym_name := g.name;
+      city := g.city;
+      created_at := g.gym_created_at;
 
-    SELECT COUNT(*)::INT
-    INTO student_count
-    FROM students s
-    WHERE s.gym_id = g.id;
+      SELECT COUNT(*)::INT
+      INTO student_count
+      FROM students s
+      WHERE s.gym_id = g.id;
 
-    SELECT COUNT(*)::INT
-    INTO class_count
-    FROM classes c
-    WHERE c.gym_id = g.id;
+      SELECT COUNT(*)::INT
+      INTO class_count
+      FROM classes c
+      WHERE c.gym_id = g.id;
 
-    monthly_revenue := 0;
-    subscription_status := NULL;
-    subscription_plan := NULL;
-    subscription_end_date := NULL;
+      monthly_revenue := 0;
+      subscription_status := NULL;
+      subscription_plan := NULL;
+      subscription_end_date := NULL;
 
-    IF has_payments THEN
-      EXECUTE
-        'SELECT COALESCE(SUM(amount), 0)
-         FROM payments
-         WHERE gym_id = $1
-           AND status = ''completed''
-           AND payment_date >= date_trunc(''month'', now())'
-      INTO monthly_revenue
-      USING g.id;
-    END IF;
+      IF has_payments THEN
+        IF has_payment_date THEN
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed''
+               AND payment_date >= date_trunc(''month'', now())'
+          INTO monthly_revenue
+          USING g.id;
+        ELSIF has_payment_created_at THEN
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed''
+               AND created_at >= date_trunc(''month'', now())'
+          INTO monthly_revenue
+          USING g.id;
+        ELSE
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed'''
+          INTO monthly_revenue
+          USING g.id;
+        END IF;
+      END IF;
 
-    IF has_subscriptions THEN
-      EXECUTE
-        'SELECT status, plan_type, end_date
-         FROM subscriptions
-         WHERE gym_id = $1
-         ORDER BY created_at DESC
-         LIMIT 1'
-      INTO subscription_status, subscription_plan, subscription_end_date
-      USING g.id;
-    END IF;
+      IF has_subscriptions THEN
+        EXECUTE
+          'SELECT status, plan_type, end_date
+           FROM subscriptions
+           WHERE gym_id = $1
+           ORDER BY subscriptions.created_at DESC
+           LIMIT 1'
+        INTO subscription_status, subscription_plan, subscription_end_date
+        USING g.id;
+      END IF;
 
-    RETURN NEXT;
-  END LOOP;
+      RETURN NEXT;
+    END LOOP;
+  ELSE
+    FOR g IN
+      SELECT
+        gyms.id,
+        gyms.name,
+        NULL::TEXT AS city,
+        gyms.created_at AS gym_created_at
+      FROM gyms
+      ORDER BY gyms.created_at DESC
+    LOOP
+      gym_id := g.id;
+      gym_name := g.name;
+      city := g.city;
+      created_at := g.gym_created_at;
+
+      SELECT COUNT(*)::INT
+      INTO student_count
+      FROM students s
+      WHERE s.gym_id = g.id;
+
+      SELECT COUNT(*)::INT
+      INTO class_count
+      FROM classes c
+      WHERE c.gym_id = g.id;
+
+      monthly_revenue := 0;
+      subscription_status := NULL;
+      subscription_plan := NULL;
+      subscription_end_date := NULL;
+
+      IF has_payments THEN
+        IF has_payment_date THEN
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed''
+               AND payment_date >= date_trunc(''month'', now())'
+          INTO monthly_revenue
+          USING g.id;
+        ELSIF has_payment_created_at THEN
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed''
+               AND created_at >= date_trunc(''month'', now())'
+          INTO monthly_revenue
+          USING g.id;
+        ELSE
+          EXECUTE
+            'SELECT COALESCE(SUM(amount), 0)
+             FROM payments
+             WHERE gym_id = $1
+               AND status = ''completed'''
+          INTO monthly_revenue
+          USING g.id;
+        END IF;
+      END IF;
+
+      IF has_subscriptions THEN
+        EXECUTE
+          'SELECT status, plan_type, end_date
+           FROM subscriptions
+           WHERE gym_id = $1
+           ORDER BY subscriptions.created_at DESC
+           LIMIT 1'
+        INTO subscription_status, subscription_plan, subscription_end_date
+        USING g.id;
+      END IF;
+
+      RETURN NEXT;
+    END LOOP;
+  END IF;
 END;
 $$;
 
