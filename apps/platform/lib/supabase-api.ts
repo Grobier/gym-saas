@@ -74,6 +74,19 @@ export interface Subscription {
   currency: string;
 }
 
+export interface SuperAdminGymOverview {
+  gym_id: string;
+  gym_name: string;
+  city: string;
+  created_at: string;
+  student_count: number;
+  class_count: number;
+  monthly_revenue: number;
+  subscription_status: string | null;
+  subscription_plan: string | null;
+  subscription_end_date: string | null;
+}
+
 export interface Payment {
   id: string;
   gym_id: string;
@@ -319,6 +332,19 @@ export const subscriptionsAPI = {
     }
 
     return { data: data as Subscription[], error: null };
+  },
+};
+
+export const superadminAPI = {
+  async getGymOverview() {
+    const { data, error } = await supabase.rpc('get_superadmin_gym_overview');
+
+    if (error) {
+      console.error('Error loading superadmin gym overview:', error);
+      return { data: null, error };
+    }
+
+    return { data: (data || []) as SuperAdminGymOverview[], error: null };
   },
 };
 

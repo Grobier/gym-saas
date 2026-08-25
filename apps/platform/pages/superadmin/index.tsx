@@ -4,18 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
 import { format } from 'date-fns';
-import { authAPI, gymsAPI, subscriptionsAPI, convertSupabaseUser, Gym, Subscription } from '../../lib/supabase-api';
+import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
-import RoleSelector from '../../components/RoleSelector';
-
-interface GymWithSubscription extends Gym {
-  subscription?: Subscription | null;
-  studentCount?: number;
-  classCount?: number;
-  monthlyRevenue?: number;
-}
 
 interface ConsolidatedMetrics {
   totalGyms: number;
@@ -29,7 +21,7 @@ interface ConsolidatedMetrics {
 
 export default function SuperAdminDashboard() {
   const router = useRouter();
-  const [gyms, setGyms] = useState<GymWithSubscription[]>([]);
+  const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<ConsolidatedMetrics>({
@@ -60,17 +52,23 @@ export default function SuperAdminDashboard() {
     }
 
     try {
-      // Get current user
       const { data: userData, error: userError } = await authAPI.getCurrentUser();
 
       if (userError || !userData.user) {
         throw new Error('Failed to get user information');
       }
 
-      setUser(convertSupabaseUser(userData.user));
+      const currentUser = convertSupabaseUser(userData.user);
 
-      // Get all gyms
-      const { data: gymsData, error: gymsError } = await gymsAPI.listAll();
+      if (currentUser.role !== 'superadmin') {
+        toast.error('No tienes acceso a esta sección');
+        router.push('/login');
+        return;
+      }
+
+      setUser(currentUser);
+
+      const { data: gymsData, error: gymsError } = await superadminAPI.getGymOverview();
 
       if (gymsError) {
         console.error('Gym access error:', gymsError);
@@ -86,46 +84,32 @@ export default function SuperAdminDashboard() {
         return;
       }
 
-      // Get subscriptions for each gym
-      // TODO: subscriptions table doesn't exist yet - use empty array for now
-      const subscriptionsData: any[] = [];
+      setGyms(gymsData);
 
-      const gymsWithSubscriptions: GymWithSubscription[] = gymsData.map((gym) => ({
-        ...gym,
-        subscription: subscriptionsData?.find((sub) => sub.gym_id === gym.id) || null,
-        // Mock data - en producción vendría de la API
-        studentCount: Math.floor(Math.random() * 200) + 20,
-        classCount: Math.floor(Math.random() * 30) + 5,
-        monthlyRevenue: Math.floor(Math.random() * 5000000) + 500000,
-      }));
-
-      setGyms(gymsWithSubscriptions);
-
-      // Calculate consolidated metrics
-      const activeGyms = gymsWithSubscriptions.filter(
-        (g) => g.subscription?.status === 'active'
+      const activeGyms = gymsData.filter(
+        (g) => g.subscription_status === 'active'
       ).length;
-      const trialGyms = gymsWithSubscriptions.filter(
-        (g) => g.subscription?.plan_type === 'trial'
+      const trialGyms = gymsData.filter(
+        (g) => g.subscription_status === 'active' && g.subscription_plan === 'trial'
       ).length;
-      const expiredGyms = gymsWithSubscriptions.filter(
-        (g) => g.subscription?.status === 'expired' || !g.subscription
+      const expiredGyms = gymsData.filter(
+        (g) => g.subscription_status === 'expired' || g.subscription_status === 'cancelled'
       ).length;
-      const totalStudents = gymsWithSubscriptions.reduce(
-        (sum, g) => sum + (g.studentCount || 0),
+      const totalStudents = gymsData.reduce(
+        (sum, g) => sum + (g.student_count || 0),
         0
       );
-      const totalClasses = gymsWithSubscriptions.reduce(
-        (sum, g) => sum + (g.classCount || 0),
+      const totalClasses = gymsData.reduce(
+        (sum, g) => sum + (g.class_count || 0),
         0
       );
-      const totalRevenue = gymsWithSubscriptions.reduce(
-        (sum, g) => sum + (g.monthlyRevenue || 0),
+      const totalRevenue = gymsData.reduce(
+        (sum, g) => sum + (g.monthly_revenue || 0),
         0
       );
 
       setMetrics({
-        totalGyms: gymsWithSubscriptions.length,
+        totalGyms: gymsData.length,
         activeGyms,
         totalStudents,
         totalClasses,
@@ -148,26 +132,15 @@ export default function SuperAdminDashboard() {
     router.push('/login');
   };
 
-  const getSubscriptionStatus = (subscription: Subscription | null | undefined) => {
-    if (!subscription) return { label: 'Sin suscripción', color: '#9ca3af', daysRemaining: 0 };
-
-    if (subscription.status === 'expired') {
-      return { label: 'Expirado', color: '#ef4444', daysRemaining: 0 };
+  const getSubscriptionStatus = (gym: SuperAdminGymOverview) => {
+    if (!gym.subscription_status) return { label: 'Sin registro', color: '#9ca3af' };
+    if (gym.subscription_status === 'expired' || gym.subscription_status === 'cancelled') {
+      return { label: 'Expirado', color: '#ef4444' };
     }
-
-    const endDate = new Date(subscription.end_date);
-    const today = new Date();
-    const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysRemaining < 0) {
-      return { label: 'Expirado', color: '#ef4444', daysRemaining: 0 };
+    if (gym.subscription_plan === 'trial') {
+      return { label: 'Trial', color: '#3b82f6' };
     }
-
-    if (subscription.plan_type === 'trial') {
-      return { label: `Trial (${daysRemaining}d)`, color: '#3b82f6', daysRemaining };
-    }
-
-    return { label: 'Activo', color: '#10b981', daysRemaining };
+    return { label: 'Activo', color: '#10b981' };
   };
 
   if (error) {
@@ -341,16 +314,16 @@ export default function SuperAdminDashboard() {
               </thead>
               <tbody>
                 {gyms.map((gym) => {
-                  const status = getSubscriptionStatus(gym.subscription);
+                  const status = getSubscriptionStatus(gym);
                   return (
-                    <tr key={gym.id}>
-                      <td className={styles.name}>{gym.name}</td>
+                    <tr key={gym.gym_id}>
+                      <td className={styles.name}>{gym.gym_name}</td>
                       <td>{gym.city || '-'}</td>
                       <td>
-                        {gym.subscription
-                          ? gym.subscription.plan_type === 'trial'
+                        {gym.subscription_plan
+                          ? gym.subscription_plan === 'trial'
                             ? '📋 Trial'
-                            : gym.subscription.plan_type === 'monthly'
+                            : gym.subscription_plan === 'monthly'
                             ? '📅 Mensual'
                             : '📅 Anual'
                           : '-'}
@@ -365,7 +338,7 @@ export default function SuperAdminDashboard() {
                             fontWeight: 'bold',
                           }}
                         >
-                          {gym.studentCount}
+                          {gym.student_count}
                         </span>
                       </td>
                       <td>
@@ -378,7 +351,7 @@ export default function SuperAdminDashboard() {
                             fontWeight: 'bold',
                           }}
                         >
-                          {gym.classCount}
+                          {gym.class_count}
                         </span>
                       </td>
                       <td>
@@ -391,7 +364,7 @@ export default function SuperAdminDashboard() {
                             fontWeight: 'bold',
                           }}
                         >
-                          ${(gym.monthlyRevenue! / 1000).toFixed(0)}k
+                          ${(gym.monthly_revenue / 1000).toFixed(0)}k
                         </span>
                       </td>
                       <td>
@@ -403,13 +376,13 @@ export default function SuperAdminDashboard() {
                         </span>
                       </td>
                       <td>
-                        {gym.subscription
-                          ? format(new Date(gym.subscription.end_date), 'dd MMM')
+                        {gym.subscription_end_date
+                          ? format(new Date(gym.subscription_end_date), 'dd MMM')
                           : '-'}
                       </td>
                       <td>
                         <button
-                          onClick={() => router.push(`/superadmin/${gym.id}`)}
+                          onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
                           className={styles.btnSmall}
                           style={{ backgroundColor: '#3b82f6' }}
                         >

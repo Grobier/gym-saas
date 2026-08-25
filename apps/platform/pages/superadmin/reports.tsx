@@ -3,26 +3,16 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, gymsAPI, convertSupabaseUser } from '../../lib/supabase-api';
+import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import styles from '../../styles/dashboard.module.css';
-
-interface GymReport {
-  id: string;
-  name: string;
-  city: string;
-  studentCount: number;
-  classCount: number;
-  monthlyRevenue: number;
-  createdAt: string;
-}
 
 export default function SuperAdminReportsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
-  const [gyms, setGyms] = useState<GymReport[]>([]);
+  const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -39,24 +29,27 @@ export default function SuperAdminReportsPage() {
     }
 
     try {
-      const { data } = await authAPI.getCurrentUser();
-      if (data.user) {
-        setUser(convertSupabaseUser(data.user));
+      const { data, error } = await authAPI.getCurrentUser();
+      if (error || !data.user) {
+        throw new Error('Error de autenticación');
       }
 
-      // Cargar todos los gymnasios
-      const { data: gymsData } = await gymsAPI.listAll();
+      const currentUser = convertSupabaseUser(data.user);
+      if (currentUser.role !== 'superadmin') {
+        toast.error('No tienes acceso a esta sección');
+        router.push('/login');
+        return;
+      }
+
+      setUser(currentUser);
+
+      const { data: gymsData, error: gymsError } = await superadminAPI.getGymOverview();
+      if (gymsError) {
+        throw new Error(typeof gymsError === 'string' ? gymsError : 'No se pudieron cargar los reportes');
+      }
+
       if (gymsData) {
-        const reportsData = gymsData.map((g: any) => ({
-          id: g.id,
-          name: g.name,
-          city: g.city || '-',
-          studentCount: Math.floor(Math.random() * 200) + 20,
-          classCount: Math.floor(Math.random() * 30) + 5,
-          monthlyRevenue: Math.floor(Math.random() * 5000000) + 500000,
-          createdAt: g.created_at,
-        }));
-        setGyms(reportsData);
+        setGyms(gymsData);
       }
     } catch (error) {
       console.error('Auth verification failed:', error);
@@ -80,31 +73,31 @@ export default function SuperAdminReportsPage() {
         headers = ['ID', 'Gimnasio', 'Ciudad', 'Estudiantes', 'Clases', 'Ingresos/mes'];
         filename = `reporte-gimnasios-${new Date().toISOString().split('T')[0]}.csv`;
       } else if (reportType === 'revenue') {
-        data = gyms.sort((a, b) => b.monthlyRevenue - a.monthlyRevenue);
+        data = [...gyms].sort((a, b) => b.monthly_revenue - a.monthly_revenue);
         headers = ['Gimnasio', 'Ingresos Mensuales', '% del Total'];
         filename = `reporte-ingresos-${new Date().toISOString().split('T')[0]}.csv`;
       }
 
       let csvContent = headers.join(',') + '\n';
-      const totalRevenue = gyms.reduce((sum, g) => sum + g.monthlyRevenue, 0);
+      const totalRevenue = gyms.reduce((sum, g) => sum + g.monthly_revenue, 0);
 
       data.forEach((row: any) => {
         let values: any[] = [];
 
         if (reportType === 'gyms') {
           values = [
-            row.id,
-            row.name,
+            row.gym_id,
+            row.gym_name,
             row.city,
-            row.studentCount,
-            row.classCount,
-            row.monthlyRevenue,
+            row.student_count,
+            row.class_count,
+            row.monthly_revenue,
           ];
         } else if (reportType === 'revenue') {
-          const percentage = ((row.monthlyRevenue / totalRevenue) * 100).toFixed(1);
+          const percentage = (totalRevenue === 0 ? 0 : (row.monthly_revenue / totalRevenue) * 100).toFixed(1);
           values = [
-            row.name,
-            row.monthlyRevenue,
+            row.gym_name,
+            row.monthly_revenue,
             `${percentage}%`,
           ];
         }
@@ -144,10 +137,10 @@ export default function SuperAdminReportsPage() {
     return <div className={styles.container}>Cargando...</div>;
   }
 
-  const totalStudents = gyms.reduce((sum, g) => sum + g.studentCount, 0);
-  const totalClasses = gyms.reduce((sum, g) => sum + g.classCount, 0);
-  const totalRevenue = gyms.reduce((sum, g) => sum + g.monthlyRevenue, 0);
-  const topGym = gyms.length > 0 ? gyms.reduce((top, g) => (g.monthlyRevenue > top.monthlyRevenue ? g : top)) : null;
+  const totalStudents = gyms.reduce((sum, g) => sum + g.student_count, 0);
+  const totalClasses = gyms.reduce((sum, g) => sum + g.class_count, 0);
+  const totalRevenue = gyms.reduce((sum, g) => sum + g.monthly_revenue, 0);
+  const topGym = gyms.length > 0 ? gyms.reduce((top, g) => (g.monthly_revenue > top.monthly_revenue ? g : top)) : null;
 
   return (
     <div className={styles.container}>
@@ -203,15 +196,15 @@ export default function SuperAdminReportsPage() {
                 borderLeft: '4px solid #f59e0b',
               }}
             >
-              <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>🏆 {topGym.name}</h3>
+              <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>🏆 {topGym.gym_name}</h3>
               <p style={{ margin: '0.5rem 0', color: '#666' }}>
-                Ingresos: <strong>${(topGym.monthlyRevenue / 1000).toFixed(0)}k/mes</strong>
+                Ingresos: <strong>${(topGym.monthly_revenue / 1000).toFixed(0)}k/mes</strong>
               </p>
               <p style={{ margin: '0.5rem 0', color: '#666' }}>
-                Estudiantes: <strong>{topGym.studentCount}</strong> | Clases: <strong>{topGym.classCount}</strong>
+                Estudiantes: <strong>{topGym.student_count}</strong> | Clases: <strong>{topGym.class_count}</strong>
               </p>
               <p style={{ margin: '0.5rem 0', color: '#999', fontSize: '0.9rem' }}>
-                {((topGym.monthlyRevenue / totalRevenue) * 100).toFixed(1)}% del total de ingresos
+                {(totalRevenue === 0 ? 0 : (topGym.monthly_revenue / totalRevenue) * 100).toFixed(1)}% del total de ingresos
               </p>
             </div>
           </section>
@@ -308,14 +301,15 @@ export default function SuperAdminReportsPage() {
               </thead>
               <tbody>
                 {gyms
-                  .sort((a, b) => b.monthlyRevenue - a.monthlyRevenue)
+                  .slice()
+                  .sort((a, b) => b.monthly_revenue - a.monthly_revenue)
                   .map((gym) => (
-                    <tr key={gym.id}>
-                      <td className={styles.name}>{gym.name}</td>
+                    <tr key={gym.gym_id}>
+                      <td className={styles.name}>{gym.gym_name}</td>
                       <td>{gym.city}</td>
-                      <td>{gym.studentCount}</td>
-                      <td>{gym.classCount}</td>
-                      <td>${(gym.monthlyRevenue / 1000).toFixed(0)}k</td>
+                      <td>{gym.student_count}</td>
+                      <td>{gym.class_count}</td>
+                      <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
                       <td>
                         <div
                           style={{
@@ -328,7 +322,7 @@ export default function SuperAdminReportsPage() {
                         >
                           <div
                             style={{
-                              width: `${(gym.monthlyRevenue / totalRevenue) * 100}%`,
+                              width: `${totalRevenue === 0 ? 0 : (gym.monthly_revenue / totalRevenue) * 100}%`,
                               height: '100%',
                               backgroundColor: '#3b82f6',
                               transition: 'width 0.3s',
@@ -340,7 +334,7 @@ export default function SuperAdminReportsPage() {
                               fontWeight: 'bold',
                             }}
                           >
-                            {((gym.monthlyRevenue / totalRevenue) * 100).toFixed(0)}%
+                            {(totalRevenue === 0 ? 0 : (gym.monthly_revenue / totalRevenue) * 100).toFixed(0)}%
                           </div>
                         </div>
                       </td>

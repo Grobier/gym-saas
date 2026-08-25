@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
 import { useAuthStore, getAvailableRolesInGym } from '../lib/store';
-import { gymsAPI } from '../lib/supabase-api';
+import { authAPI, convertSupabaseUser, gymsAPI } from '../lib/supabase-api';
 import styles from '../styles/dashboard.module.css';
 
 interface GymWithRoles {
@@ -18,6 +18,7 @@ export default function RoleSelectorPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [gymsWithRoles, setGymsWithRoles] = useState<GymWithRoles[]>([]);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   const availableRoles = useAuthStore((state) => state.availableRoles);
@@ -36,6 +37,12 @@ export default function RoleSelectorPage() {
     }
 
     try {
+      const { data: authData } = await authAPI.getCurrentUser();
+      if (authData.user) {
+        const currentUser = convertSupabaseUser(authData.user);
+        setIsSuperadmin(currentUser.role === 'superadmin');
+      }
+
       // Get all gyms
       const { data: gymsData } = await gymsAPI.listAll();
       if (!gymsData) {
@@ -88,7 +95,39 @@ export default function RoleSelectorPage() {
       </header>
 
       <main className={styles.main} style={{ maxWidth: '600px', margin: '0 auto' }}>
-        {gymsWithRoles.length === 0 ? (
+        {isSuperadmin && (
+          <div
+            style={{
+              padding: '1.5rem',
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              backgroundColor: '#fafafa',
+              marginBottom: '1rem',
+            }}
+          >
+            <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem' }}>Plataforma</h2>
+            <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.9rem' }}>
+              Acceso global al panel de superadministración
+            </p>
+            <button
+              onClick={() => router.push('/superadmin')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#111827',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: 500,
+              }}
+            >
+              👑 Super Admin
+            </button>
+          </div>
+        )}
+
+        {gymsWithRoles.length === 0 && !isSuperadmin ? (
           <div className={styles.empty}>
             <p>No tienes roles asignados en ningún gimnasio</p>
           </div>
