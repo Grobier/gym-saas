@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
-import styles from '../../styles/dashboard.module.css';
+import Sidebar from '../../components/Sidebar';
+import saStyles from '../../styles/superadmin.module.css';
 
 interface ConsolidatedMetrics {
   totalGyms: number;
@@ -86,27 +87,16 @@ export default function SuperAdminDashboard() {
 
       setGyms(gymsData);
 
-      const activeGyms = gymsData.filter(
-        (g) => g.subscription_status === 'active'
-      ).length;
+      const activeGyms = gymsData.filter((g) => g.subscription_status === 'active').length;
       const trialGyms = gymsData.filter(
         (g) => g.subscription_status === 'active' && g.subscription_plan === 'trial'
       ).length;
       const expiredGyms = gymsData.filter(
         (g) => g.subscription_status === 'expired' || g.subscription_status === 'cancelled'
       ).length;
-      const totalStudents = gymsData.reduce(
-        (sum, g) => sum + (g.student_count || 0),
-        0
-      );
-      const totalClasses = gymsData.reduce(
-        (sum, g) => sum + (g.class_count || 0),
-        0
-      );
-      const totalRevenue = gymsData.reduce(
-        (sum, g) => sum + (g.monthly_revenue || 0),
-        0
-      );
+      const totalStudents = gymsData.reduce((sum, g) => sum + (g.student_count || 0), 0);
+      const totalClasses = gymsData.reduce((sum, g) => sum + (g.class_count || 0), 0);
+      const totalRevenue = gymsData.reduce((sum, g) => sum + (g.monthly_revenue || 0), 0);
 
       setMetrics({
         totalGyms: gymsData.length,
@@ -145,160 +135,142 @@ export default function SuperAdminDashboard() {
 
   if (error) {
     return (
-      <div className={styles.container}>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <h2>Error</h2>
-          <p>{error}</p>
-          <button onClick={() => bootstrap()} style={{ marginRight: '1rem' }}>
-            Intentar de Nuevo
-          </button>
-          <button onClick={handleLogout}>
-            Cerrar sesión
-          </button>
+      <div className={saStyles.shell}>
+        <div className={saStyles.main}>
+          <div className={saStyles.emptyState}>
+            <h2>Error</h2>
+            <p>{error}</p>
+            <button onClick={() => bootstrap()} style={{ marginRight: '1rem' }}>
+              Intentar de Nuevo
+            </button>
+            <button onClick={handleLogout}>Cerrar sesión</button>
+          </div>
         </div>
       </div>
     );
   }
 
   if (loading || gyms.length === 0) {
-    return <div className={styles.container}>Cargando...</div>;
+    return (
+      <div className={saStyles.shell}>
+        <div className={saStyles.main}>
+          <div className={saStyles.emptyState}>Cargando...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>Super Administrador</h1>
-        <div className={styles.userInfo} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button
-            onClick={() => router.push('/role-selector')}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#f5f5f5',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-            }}
-          >
-            🔄 Cambiar Perfil
-          </button>
-          <span>{user?.name}</span>
-          <button onClick={handleLogout} className={styles.logoutBtn}>
-            Cerrar sesión
-          </button>
-        </div>
-      </header>
+    <div className={saStyles.shell}>
+      <Sidebar
+        role="superadmin"
+        userName={user?.name || user?.email}
+        onLogout={handleLogout}
+      />
 
-      <main className={styles.main}>
-        {/* Métricas Consolidadas */}
-        <section style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '1rem' }}>Métricas Consolidadas</h2>
-          <div className={styles.metricsGrid}>
-            <div className={styles.metricCard}>
-              <h3>Total de Gimnasios</h3>
-              <p className={styles.metricValue}>{metrics.totalGyms}</p>
-              <span className={styles.metricLabel}>En el sistema</span>
+      <main className={saStyles.main}>
+        <section className={saStyles.hero}>
+          <div>
+            <span className={saStyles.eyebrow}>Platform View</span>
+            <h1 className={saStyles.title}>Super Administrador</h1>
+            <p className={saStyles.subtitle}>
+              Vista consolidada de gimnasios, suscripciones y métricas globales con una
+              superficie de control minimalista inspirada en Apple.
+            </p>
+          </div>
+          <div className={saStyles.heroActions}>
+            <button
+              onClick={() => router.push('/role-selector')}
+              className={saStyles.secondaryAction}
+            >
+              Cambiar Perfil
+            </button>
+            <button
+              onClick={() => router.push('/superadmin/reports')}
+              className={saStyles.primaryAction}
+            >
+              Abrir Reportes
+            </button>
+          </div>
+        </section>
+
+        <section className={saStyles.section}>
+          <div className={saStyles.sectionHeader}>
+            <div>
+              <h2 className={saStyles.sectionTitle}>Métricas Consolidadas</h2>
+              <p className={saStyles.sectionCopy}>Pulso general de la red conectado a Supabase.</p>
             </div>
-
-            <div className={styles.metricCard}>
-              <h3>Activos</h3>
-              <p className={styles.metricValue} style={{ color: '#10b981' }}>
-                {metrics.activeGyms}
-              </p>
-              <span className={styles.metricLabel}>
+          </div>
+          <div className={saStyles.metricGrid}>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Total de Gimnasios</p>
+              <p className={saStyles.metricValue}>{metrics.totalGyms}</p>
+              <div className={saStyles.metricHint}>En el sistema</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Activos</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneSuccess}`}>{metrics.activeGyms}</p>
+              <div className={saStyles.metricHint}>
                 {((metrics.activeGyms / metrics.totalGyms) * 100).toFixed(0)}% activos
-              </span>
-            </div>
-
-            <div className={styles.metricCard}>
-              <h3>Total de Estudiantes</h3>
-              <p className={styles.metricValue}>{metrics.totalStudents.toLocaleString()}</p>
-              <span className={styles.metricLabel}>Todos los gimnasios</span>
-            </div>
-
-            <div className={styles.metricCard}>
-              <h3>Total de Clases</h3>
-              <p className={styles.metricValue}>{metrics.totalClasses}</p>
-              <span className={styles.metricLabel}>Clases programadas</span>
-            </div>
-
-            <div className={styles.metricCard}>
-              <h3>Ingresos Mensuales</h3>
-              <p className={styles.metricValue}>
+              </div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Total de Estudiantes</p>
+              <p className={saStyles.metricValue}>{metrics.totalStudents.toLocaleString()}</p>
+              <div className={saStyles.metricHint}>Todos los gimnasios</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Total de Clases</p>
+              <p className={saStyles.metricValue}>{metrics.totalClasses}</p>
+              <div className={saStyles.metricHint}>Clases programadas</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Ingresos Mensuales</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>
                 ${(metrics.totalRevenue / 1000000).toFixed(1)}M
               </p>
-              <span className={styles.metricLabel}>Consolidados</span>
-            </div>
-
-            <div className={styles.metricCard + ' ' + styles.warning}>
-              <h3>Vencidos/Inactivos</h3>
-              <p className={styles.metricValue} style={{ color: '#ef4444' }}>
-                {metrics.expiredGyms}
-              </p>
-              <span className={styles.metricLabel}>Requieren atención</span>
-            </div>
+              <div className={saStyles.metricHint}>Consolidados</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Vencidos/Inactivos</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>{metrics.expiredGyms}</p>
+              <div className={saStyles.metricHint}>Requieren atención</div>
+            </article>
           </div>
         </section>
 
-        {/* Resumen de Suscripciones */}
-        <section style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '1rem' }}>Estado de Suscripciones</h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem',
-            }}
-          >
-            <div
-              style={{
-                padding: '1.5rem',
-                backgroundColor: '#f0fdf4',
-                borderRadius: '8px',
-                borderLeft: '4px solid #10b981',
-              }}
-            >
-              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Activos</p>
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
-                {metrics.activeGyms}
-              </p>
+        <section className={saStyles.section}>
+          <div className={saStyles.sectionHeader}>
+            <div>
+              <h2 className={saStyles.sectionTitle}>Estado de Suscripciones</h2>
+              <p className={saStyles.sectionCopy}>Lectura comercial rápida.</p>
             </div>
-
-            <div
-              style={{
-                padding: '1.5rem',
-                backgroundColor: '#f0f9ff',
-                borderRadius: '8px',
-                borderLeft: '4px solid #3b82f6',
-              }}
-            >
-              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Trial</p>
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
-                {metrics.trialGyms}
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: '1.5rem',
-                backgroundColor: '#fef2f2',
-                borderRadius: '8px',
-                borderLeft: '4px solid #ef4444',
-              }}
-            >
-              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Expirados</p>
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '1.8rem', fontWeight: 'bold' }}>
-                {metrics.expiredGyms}
-              </p>
-            </div>
+          </div>
+          <div className={saStyles.summaryGrid}>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentSuccess}`}>
+              <p className={saStyles.summaryCardTitle}>Activos</p>
+              <p className={saStyles.summaryValue}>{metrics.activeGyms}</p>
+            </article>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
+              <p className={saStyles.summaryCardTitle}>Trial</p>
+              <p className={saStyles.summaryValue}>{metrics.trialGyms}</p>
+            </article>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentDanger}`}>
+              <p className={saStyles.summaryCardTitle}>Expirados</p>
+              <p className={saStyles.summaryValue}>{metrics.expiredGyms}</p>
+            </article>
           </div>
         </section>
 
-        {/* Tabla Gimnasios Detallada */}
-        <section>
-          <h2 style={{ marginBottom: '1rem' }}>Gimnasios ({gyms.length})</h2>
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
+        <section className={saStyles.section}>
+          <div className={saStyles.sectionHeader}>
+            <div>
+              <h2 className={saStyles.sectionTitle}>Gimnasios</h2>
+              <p className={saStyles.sectionCopy}>{gyms.length} registros visibles.</p>
+            </div>
+          </div>
+          <div className={saStyles.panel}>
+            <table className={saStyles.table}>
               <thead>
                 <tr>
                   <th>Nombre</th>
@@ -306,7 +278,7 @@ export default function SuperAdminDashboard() {
                   <th>Plan</th>
                   <th>Estudiantes</th>
                   <th>Clases</th>
-                  <th>Ingresos/mes</th>
+                  <th>Ingresos/Mes</th>
                   <th>Estado</th>
                   <th>Vence</th>
                   <th>Acciones</th>
@@ -317,74 +289,26 @@ export default function SuperAdminDashboard() {
                   const status = getSubscriptionStatus(gym);
                   return (
                     <tr key={gym.gym_id}>
-                      <td className={styles.name}>{gym.gym_name}</td>
+                      <td className={saStyles.nameCell}>{gym.gym_name}</td>
                       <td>{gym.city || '-'}</td>
                       <td>
                         {gym.subscription_plan
                           ? gym.subscription_plan === 'trial'
-                            ? '📋 Trial'
+                            ? 'Trial'
                             : gym.subscription_plan === 'monthly'
-                            ? '📅 Mensual'
-                            : '📅 Anual'
+                            ? 'Mensual'
+                            : 'Anual'
                           : '-'}
                       </td>
-                      <td>
-                        <span
-                          style={{
-                            padding: '0.25rem 0.75rem',
-                            backgroundColor: '#f0f9ff',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {gym.student_count}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            padding: '0.25rem 0.75rem',
-                            backgroundColor: '#f0fdf4',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {gym.class_count}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            padding: '0.25rem 0.75rem',
-                            backgroundColor: '#fef3c7',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          ${(gym.monthly_revenue / 1000).toFixed(0)}k
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={styles.status}
-                          style={{ backgroundColor: status.color }}
-                        >
-                          {status.label}
-                        </span>
-                      </td>
-                      <td>
-                        {gym.subscription_end_date
-                          ? format(new Date(gym.subscription_end_date), 'dd MMM')
-                          : '-'}
-                      </td>
+                      <td><span className={`${saStyles.pill} ${saStyles.pillBlue}`}>{gym.student_count}</span></td>
+                      <td><span className={`${saStyles.pill} ${saStyles.pillGreen}`}>{gym.class_count}</span></td>
+                      <td><span className={`${saStyles.pill} ${saStyles.pillAmber}`}>${(gym.monthly_revenue / 1000).toFixed(0)}k</span></td>
+                      <td><span className={saStyles.statusPill} style={{ backgroundColor: status.color }}>{status.label}</span></td>
+                      <td>{gym.subscription_end_date ? format(new Date(gym.subscription_end_date), 'dd MMM') : '-'}</td>
                       <td>
                         <button
                           onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
-                          className={styles.btnSmall}
-                          style={{ backgroundColor: '#3b82f6' }}
+                          className={saStyles.secondaryAction}
                         >
                           Ver
                         </button>

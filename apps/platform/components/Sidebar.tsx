@@ -22,6 +22,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isSuperadmin = role === 'superadmin';
 
   const getNavItems = () => {
     switch (role) {
@@ -70,7 +71,7 @@ export default function Sidebar({
     <>
       {/* Mobile toggle button */}
       <button
-        className={styles.mobileToggle}
+        className={`${styles.mobileToggle} ${isSuperadmin ? styles.mobileToggleSuperadmin : ''}`}
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label="Toggle sidebar"
       >
@@ -78,9 +79,15 @@ export default function Sidebar({
       </button>
 
       {/* Sidebar */}
-      <aside className={`${styles.sidebar} ${mobileOpen ? styles.open : ''}`}>
+      <aside className={`${styles.sidebar} ${mobileOpen ? styles.open : ''} ${isSuperadmin ? styles.sidebarSuperadmin : ''}`}>
         {/* User info */}
-        <div className={styles.userSection}>
+        <div className={`${styles.userSection} ${isSuperadmin ? styles.userSectionSuperadmin : ''}`}>
+          {isSuperadmin && (
+            <div className={styles.brandBlock}>
+              <div className={styles.brandBadge}>moveOS</div>
+              <div className={styles.brandCopy}>Control Room</div>
+            </div>
+          )}
           <div className={styles.userName}>{userName || 'Usuario'}</div>
           <div className={styles.userRole}>{role}</div>
         </div>
@@ -92,7 +99,7 @@ export default function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''}`}
+              className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''} ${isSuperadmin ? styles.navLinkSuperadmin : ''} ${isSuperadmin && isActive(item.href) ? styles.activeSuperadmin : ''}`}
               onClick={() => setMobileOpen(false)}
             >
               {item.label}
