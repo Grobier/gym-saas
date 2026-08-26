@@ -28,7 +28,13 @@ export default function Sidebar({
     switch (role) {
       case 'superadmin':
         return [
-          { label: 'Dashboard', href: '/superadmin' },
+          { label: 'Resumen', href: '/superadmin' },
+          { label: 'Gimnasios', href: '/superadmin/gyms' },
+          { label: 'Crear Gym', href: '/superadmin/create-gym' },
+          { label: 'Administradores', href: '/superadmin/admins' },
+          { label: 'Coaches', href: '/superadmin/coaches' },
+          { label: 'Alumnos', href: '/superadmin/students' },
+          { label: 'Suscripciones', href: '/superadmin/subscriptions' },
           { label: 'Reportes', href: '/superadmin/reports' },
         ];
       case 'admin':

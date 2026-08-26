@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import CreateGymForm from '../../components/superadmin/CreateGymForm';
 import saStyles from '../../styles/superadmin.module.css';
 
 interface ConsolidatedMetrics {
@@ -26,30 +27,12 @@ interface ConsolidatedMetrics {
   expiredGyms: number;
 }
 
-interface CreateGymFormState {
-  gym_name: string;
-  city: string;
-  admin_name: string;
-  admin_email: string;
-  admin_password: string;
-}
-
-const initialCreateGymState: CreateGymFormState = {
-  gym_name: '',
-  city: '',
-  admin_name: '',
-  admin_email: '',
-  admin_password: '',
-};
-
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creatingGym, setCreatingGym] = useState(false);
   const [updatingGymId, setUpdatingGymId] = useState<string | null>(null);
-  const [createGymForm, setCreateGymForm] = useState<CreateGymFormState>(initialCreateGymState);
   const [metrics, setMetrics] = useState<ConsolidatedMetrics>({
     totalGyms: 0,
     operationalGyms: 0,
@@ -153,55 +136,6 @@ export default function SuperAdminDashboard() {
       return { label: 'Trial', color: '#3b82f6' };
     }
     return { label: 'Activo', color: '#10b981' };
-  };
-
-  const handleCreateGymInputChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = event.target;
-    setCreateGymForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleCreateGym = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!createGymForm.gym_name || !createGymForm.admin_name || !createGymForm.admin_email) {
-      toast.error('Completa nombre del gimnasio, nombre del administrador y correo.');
-      return;
-    }
-
-    setCreatingGym(true);
-
-    try {
-      const { data, error: creationError } = await superadminAPI.createGymWithAdmin({
-        gym_name: createGymForm.gym_name,
-        city: createGymForm.city,
-        admin_name: createGymForm.admin_name,
-        admin_email: createGymForm.admin_email,
-        admin_password: createGymForm.admin_password || undefined,
-      });
-
-      if (creationError) {
-        throw new Error(typeof creationError === 'string' ? creationError : 'No se pudo crear el gimnasio');
-      }
-
-      toast.success(
-        data?.temp_password
-          ? `Gimnasio creado. Password temporal del admin: ${data.temp_password}`
-          : 'Gimnasio y administrador creados'
-      );
-
-      setCreateGymForm(initialCreateGymState);
-      await bootstrap();
-    } catch (runtimeError: any) {
-      console.error('Create gym error:', runtimeError);
-      toast.error(runtimeError?.message || 'No se pudo crear el gimnasio');
-    } finally {
-      setCreatingGym(false);
-    }
   };
 
   const handleToggleGym = async (gym: SuperAdminGymOverview) => {
@@ -363,84 +297,7 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
 
-              <form onSubmit={handleCreateGym} className={saStyles.formStack}>
-                <div className={saStyles.fieldGrid}>
-                  <label className={saStyles.field}>
-                    <span>Nombre del gym / box</span>
-                    <input
-                      name="gym_name"
-                      value={createGymForm.gym_name}
-                      onChange={handleCreateGymInputChange}
-                      className={saStyles.input}
-                      placeholder="CrossFit Central"
-                      disabled={creatingGym}
-                    />
-                  </label>
-                  <label className={saStyles.field}>
-                    <span>Ciudad</span>
-                    <input
-                      name="city"
-                      value={createGymForm.city}
-                      onChange={handleCreateGymInputChange}
-                      className={saStyles.input}
-                      placeholder="Santiago"
-                      disabled={creatingGym}
-                    />
-                  </label>
-                </div>
-
-                <div className={saStyles.fieldGrid}>
-                  <label className={saStyles.field}>
-                    <span>Administrador</span>
-                    <input
-                      name="admin_name"
-                      value={createGymForm.admin_name}
-                      onChange={handleCreateGymInputChange}
-                      className={saStyles.input}
-                      placeholder="Nombre del administrador"
-                      disabled={creatingGym}
-                    />
-                  </label>
-                  <label className={saStyles.field}>
-                    <span>Correo admin</span>
-                    <input
-                      name="admin_email"
-                      type="email"
-                      value={createGymForm.admin_email}
-                      onChange={handleCreateGymInputChange}
-                      className={saStyles.input}
-                      placeholder="admin@gym.com"
-                      disabled={creatingGym}
-                    />
-                  </label>
-                </div>
-
-                <label className={saStyles.field}>
-                  <span>Password temporal opcional</span>
-                  <input
-                    name="admin_password"
-                    value={createGymForm.admin_password}
-                    onChange={handleCreateGymInputChange}
-                    className={saStyles.input}
-                    placeholder="Si se deja vacío, se genera automáticamente"
-                    disabled={creatingGym}
-                  />
-                </label>
-
-                <div className={saStyles.actionRow}>
-                  <button
-                    type="button"
-                    onClick={() => setCreateGymForm(initialCreateGymState)}
-                    className={saStyles.secondaryAction}
-                    disabled={creatingGym}
-                  >
-                    Limpiar
-                  </button>
-                  <button type="submit" className={saStyles.primaryAction} disabled={creatingGym}>
-                    {creatingGym ? 'Creando...' : 'Crear Gym + Admin'}
-                  </button>
-                </div>
-              </form>
+              <CreateGymForm onCreated={bootstrap} />
             </div>
 
             <div className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
