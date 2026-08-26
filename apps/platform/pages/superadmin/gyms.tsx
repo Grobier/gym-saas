@@ -210,7 +210,7 @@ export default function SuperAdminGymsPage() {
                           onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
                           className={saStyles.secondaryAction}
                         >
-                          Ver
+                          Abrir ecosistema
                         </button>
                         <button
                           onClick={() => handleToggleGym(gym)}

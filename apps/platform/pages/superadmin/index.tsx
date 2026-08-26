@@ -415,12 +415,12 @@ export default function SuperAdminDashboard() {
                       </td>
                       <td>
                         <div className={saStyles.inlineActions}>
-                          <button
-                            onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
-                            className={saStyles.secondaryAction}
-                          >
-                            Ver
-                          </button>
+                        <button
+                          onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
+                          className={saStyles.secondaryAction}
+                        >
+                          Abrir ecosistema
+                        </button>
                           <button
                             onClick={() => handleToggleGym(gym)}
                             className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}

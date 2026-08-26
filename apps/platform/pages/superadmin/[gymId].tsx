@@ -154,6 +154,67 @@ export default function SuperAdminGymDetailPage() {
   const admins = members.filter((member) => member.role === 'admin');
   const coaches = members.filter((member) => member.role === 'coach');
   const students = members.filter((member) => member.role === 'student');
+  const studentsWithoutAccount = students.filter((member) => member.status === 'without-account');
+  const blockedMembers = members.filter((member) => member.status === 'blocked');
+
+  const renderMembersTable = (
+    title: string,
+    description: string,
+    group: SuperAdminGymMember[],
+    emptyLabel: string
+  ) => (
+    <section className={saStyles.section}>
+      <div className={saStyles.panel}>
+        <div className={saStyles.sectionHeader}>
+          <div>
+            <h2 className={saStyles.sectionTitle}>{title}</h2>
+            <p className={saStyles.sectionCopy}>{description}</p>
+          </div>
+        </div>
+
+        {group.length === 0 ? (
+          <div className={saStyles.emptyInline}>{emptyLabel}</div>
+        ) : (
+          <table className={saStyles.table}>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Estado</th>
+                <th>Alta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.map((member, index) => (
+                <tr key={`${title}-${member.user_id || member.email || index}`}>
+                  <td className={saStyles.nameCell}>{member.display_name}</td>
+                  <td>{member.email || '-'}</td>
+                  <td>
+                    <span
+                      className={saStyles.statusPill}
+                      style={{
+                        backgroundColor:
+                          member.status === 'blocked'
+                            ? '#ef4444'
+                            : member.status === 'without-account'
+                              ? '#f59e0b'
+                              : '#10b981',
+                      }}
+                    >
+                      {member.status}
+                    </span>
+                  </td>
+                  <td>
+                    {member.created_at ? new Date(member.created_at).toLocaleDateString() : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
 
   return (
     <div className={saStyles.shell}>
@@ -212,6 +273,20 @@ export default function SuperAdminGymDetailPage() {
               <p className={saStyles.metricLabel}>Alumnos</p>
               <p className={saStyles.metricValue}>{gym.student_count}</p>
               <div className={saStyles.metricHint}>Base registrada</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Sin Cuenta</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>
+                {studentsWithoutAccount.length}
+              </p>
+              <div className={saStyles.metricHint}>Alumnos no activados</div>
+            </article>
+            <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Miembros Bloqueados</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>
+                {blockedMembers.length}
+              </p>
+              <div className={saStyles.metricHint}>Por estado operativo del gym</div>
             </article>
           </div>
         </section>
@@ -305,57 +380,34 @@ export default function SuperAdminGymDetailPage() {
         <section className={saStyles.section}>
           <div className={saStyles.sectionHeader}>
             <div>
-              <h2 className={saStyles.sectionTitle}>Ramas del Gimnasio</h2>
+              <h2 className={saStyles.sectionTitle}>Ecosistema del Gimnasio</h2>
               <p className={saStyles.sectionCopy}>
-                Personal y alumnos afectados por el estado operativo del gimnasio.
+                Vista desglosada por rama para revisar responsables, coaches y base de alumnos.
               </p>
             </div>
           </div>
-          <div className={saStyles.panel}>
-            <table className={saStyles.table}>
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Rol</th>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>Estado</th>
-                  <th>Alta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member, index) => (
-                  <tr key={`${member.role}-${member.user_id || member.email || index}`}>
-                    <td>{member.member_type === 'staff' ? 'Staff' : 'Alumno'}</td>
-                    <td>{member.role}</td>
-                    <td className={saStyles.nameCell}>{member.display_name}</td>
-                    <td>{member.email || '-'}</td>
-                    <td>
-                      <span
-                        className={saStyles.statusPill}
-                        style={{
-                          backgroundColor:
-                            member.status === 'blocked'
-                              ? '#ef4444'
-                              : member.status === 'without-account'
-                                ? '#f59e0b'
-                                : '#10b981',
-                        }}
-                      >
-                        {member.status}
-                      </span>
-                    </td>
-                    <td>
-                      {member.created_at
-                        ? new Date(member.created_at).toLocaleDateString()
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </section>
+
+        {renderMembersTable(
+          'Administradores',
+          'Responsables directos de operación y gestión del gimnasio.',
+          admins,
+          'No hay administradores asignados a este gimnasio.'
+        )}
+
+        {renderMembersTable(
+          'Coaches',
+          'Equipo técnico y operativo asociado a la sede.',
+          coaches,
+          'No hay coaches asignados a este gimnasio.'
+        )}
+
+        {renderMembersTable(
+          'Alumnos',
+          'Base estudiantil visible por el superadministrador.',
+          students,
+          'No hay alumnos registrados en este gimnasio.'
+        )}
       </main>
     </div>
   );
