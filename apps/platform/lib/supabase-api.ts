@@ -3,6 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 // Initialize Supabase client lazily only when needed (client-side only)
 let supabaseInstance: any = null;
 
+function isMissingRpcError(error: any) {
+  const message = String(error?.message || '').toLowerCase();
+  const details = String(error?.details || '').toLowerCase();
+  const hint = String(error?.hint || '').toLowerCase();
+  const code = String(error?.code || '').toLowerCase();
+
+  return (
+    code === '404' ||
+    message.includes('404') ||
+    message.includes('not found') ||
+    message.includes('could not find the function') ||
+    details.includes('could not find the function') ||
+    hint.includes('could not find the function')
+  );
+}
+
 export const supabase = {
   auth: {
     signInWithPassword: async (credentials: any) => {
@@ -220,7 +236,48 @@ export const userAccessAPI = {
         return { data: null, error: fallback.error };
       }
 
-      return { data: (fallback.data || []) as UserAccess[], error: null };
+      const fallbackRoles = (fallback.data || []) as UserAccess[];
+      if (fallbackRoles.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const uniqueGymIds = [...new Set(fallbackRoles.map((role) => role.gym_id))];
+      const states = await supabase
+        .from('gym_management_states')
+        .select('gym_id, is_active, is_archived')
+        .in('gym_id', uniqueGymIds);
+
+      if (states.error) {
+        console.warn('Error filtering gym states in role fallback:', states.error);
+        return { data: fallbackRoles, error: null };
+      }
+
+      const stateMap = new Map<
+        string,
+        {
+          is_active: boolean | null;
+          is_archived: boolean | null;
+        }
+      >(
+        (states.data || []).map((state: any) => [
+          state.gym_id,
+          {
+            is_active: state.is_active ?? null,
+            is_archived: state.is_archived ?? null,
+          },
+        ])
+      );
+
+      const filteredRoles = fallbackRoles.filter((role) => {
+        const state = stateMap.get(role.gym_id);
+        if (!state) {
+          return true;
+        }
+
+        return state.is_active !== false && state.is_archived !== true;
+      });
+
+      return { data: filteredRoles, error: null };
     } catch (error: any) {
       console.error('Error in getMyRoles:', error);
       return { data: null, error: error.message };
@@ -446,6 +503,15 @@ export const superadminAPI = {
 
     if (error) {
       console.error('Error deleting gym permanently:', error);
+
+      if (isMissingRpcError(error)) {
+        return {
+          data: null,
+          error:
+            'Falta aplicar en Supabase la migración 009_superadmin_archive_delete.sql. La función delete_gym_permanently todavía no existe en producción.',
+        };
+      }
+
       return { data: null, error };
     }
 

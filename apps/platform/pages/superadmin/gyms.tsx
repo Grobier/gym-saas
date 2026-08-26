@@ -376,10 +376,10 @@ export default function SuperAdminGymsPage() {
         title="Archivar gimnasio"
         description={
           archiveTarget
-            ? `Archivarás ${archiveTarget.gym_name}. Quedará fuera de operación y del catálogo activo.`
+            ? `Archivarás todo el ecosistema de ${archiveTarget.gym_name}. Admin, coaches y alumnos perderán acceso operativo, pero los datos quedarán guardados para restaurarlo después.`
             : ''
         }
-        confirmLabel="Archivar gym"
+        confirmLabel="Archivar ecosistema"
         onConfirm={confirmArchiveGym}
         isLoading={Boolean(archiveTarget && updatingGymId === archiveTarget.gym_id)}
         reasonLabel="Motivo del archivado"
