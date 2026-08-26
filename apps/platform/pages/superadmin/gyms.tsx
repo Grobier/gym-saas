@@ -18,6 +18,7 @@ export default function SuperAdminGymsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [updatingGymId, setUpdatingGymId] = useState<string | null>(null);
+  const [deletingGymId, setDeletingGymId] = useState<string | null>(null);
   const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
 
   const user = useAuthStore((state) => state.user);
@@ -104,6 +105,69 @@ export default function SuperAdminGymsPage() {
     }
   };
 
+  const handleArchiveGym = async (gym: SuperAdminGymOverview) => {
+    const shouldArchive = !gym.is_archived;
+    const reason = shouldArchive
+      ? window.prompt(
+          `Razón para archivar ${gym.gym_name}. El gym quedará fuera de operación y de selección activa.`,
+          gym.archived_reason || ''
+        )
+      : '';
+
+    if (shouldArchive && reason === null) {
+      return;
+    }
+
+    setUpdatingGymId(gym.gym_id);
+    try {
+      const { error } = await superadminAPI.toggleGymArchive(
+        gym.gym_id,
+        shouldArchive,
+        shouldArchive ? reason || 'Archivado por superadministración' : undefined
+      );
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
+      }
+
+      toast.success(shouldArchive ? 'Gimnasio archivado' : 'Gimnasio restaurado');
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Archive gym error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo archivar el gimnasio');
+    } finally {
+      setUpdatingGymId(null);
+    }
+  };
+
+  const handleDeleteGym = async (gym: SuperAdminGymOverview) => {
+    const confirmation = window.prompt(
+      `Escribe ELIMINAR para borrar permanentemente ${gym.gym_name}. Solo funciona si no tiene datos relacionados.`
+    );
+
+    if (confirmation !== 'ELIMINAR') {
+      return;
+    }
+
+    setDeletingGymId(gym.gym_id);
+    try {
+      const { error } = await superadminAPI.deleteGym(gym.gym_id);
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo eliminar el gimnasio');
+      }
+
+      toast.success('Gimnasio eliminado permanentemente');
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Delete gym error:', runtimeError);
+      toast.error(
+        runtimeError?.message || 'No se pudo eliminar. Si tiene datos relacionados, archívalo.'
+      );
+    } finally {
+      setDeletingGymId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className={saStyles.shell}>
@@ -114,7 +178,9 @@ export default function SuperAdminGymsPage() {
     );
   }
 
-  const activeGyms = gyms.filter((gym) => gym.is_active).length;
+  const visibleGyms = gyms.filter((gym) => !gym.is_archived);
+  const archivedGyms = gyms.filter((gym) => gym.is_archived).length;
+  const activeGyms = visibleGyms.filter((gym) => gym.is_active).length;
   const blockedGyms = gyms.filter((gym) => !gym.is_active).length;
   const gymsWithoutAdmin = gyms.filter((gym) => gym.admin_count === 0).length;
 
@@ -159,6 +225,11 @@ export default function SuperAdminGymsPage() {
               <div className={saStyles.metricHint}>Sin acceso operativo</div>
             </article>
             <article className={saStyles.metricCard}>
+              <p className={saStyles.metricLabel}>Archivados</p>
+              <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>{archivedGyms}</p>
+              <div className={saStyles.metricHint}>Fuera del catálogo activo</div>
+            </article>
+            <article className={saStyles.metricCard}>
               <p className={saStyles.metricLabel}>Sin Admin</p>
               <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>{gymsWithoutAdmin}</p>
               <div className={saStyles.metricHint}>Requieren asignación</div>
@@ -196,11 +267,21 @@ export default function SuperAdminGymsPage() {
                     <td>
                       <span
                         className={saStyles.statusPill}
-                        style={{ backgroundColor: gym.is_active ? '#10b981' : '#ef4444' }}
+                        style={{
+                          backgroundColor: gym.is_archived
+                            ? '#7c8798'
+                            : gym.is_active
+                              ? '#10b981'
+                              : '#ef4444',
+                        }}
                       >
-                        {gym.is_active ? 'Operativo' : 'Bloqueado'}
+                        {gym.is_archived ? 'Archivado' : gym.is_active ? 'Operativo' : 'Bloqueado'}
                       </span>
-                      {gym.blocked_reason && <div className={saStyles.microCopy}>{gym.blocked_reason}</div>}
+                      {(gym.archived_reason || gym.blocked_reason) && (
+                        <div className={saStyles.microCopy}>
+                          {gym.archived_reason || gym.blocked_reason}
+                        </div>
+                      )}
                     </td>
                     <td>{gym.subscription_plan || 'Sin registro'}</td>
                     <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
@@ -214,7 +295,7 @@ export default function SuperAdminGymsPage() {
                         </button>
                         <button
                           onClick={() => handleToggleGym(gym)}
-                          disabled={updatingGymId === gym.gym_id}
+                          disabled={updatingGymId === gym.gym_id || gym.is_archived}
                           className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
                         >
                           {updatingGymId === gym.gym_id
@@ -222,6 +303,24 @@ export default function SuperAdminGymsPage() {
                             : gym.is_active
                               ? 'Bloquear'
                               : 'Activar'}
+                        </button>
+                        <button
+                          onClick={() => handleArchiveGym(gym)}
+                          disabled={updatingGymId === gym.gym_id}
+                          className={saStyles.secondaryAction}
+                        >
+                          {updatingGymId === gym.gym_id
+                            ? 'Guardando...'
+                            : gym.is_archived
+                              ? 'Restaurar'
+                              : 'Archivar'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGym(gym)}
+                          disabled={deletingGymId === gym.gym_id}
+                          className={saStyles.ghostDangerAction}
+                        >
+                          {deletingGymId === gym.gym_id ? 'Eliminando...' : 'Eliminar'}
                         </button>
                       </div>
                     </td>

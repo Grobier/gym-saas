@@ -89,6 +89,8 @@ export interface SuperAdminGymOverview {
   coach_count: number;
   is_active: boolean;
   blocked_reason: string | null;
+  is_archived: boolean;
+  archived_reason: string | null;
 }
 
 export interface SuperAdminGymMember {
@@ -412,6 +414,42 @@ export const superadminAPI = {
       },
       error: null,
     };
+  },
+
+  async toggleGymArchive(gymId: string, isArchived: boolean, reason?: string) {
+    const { data, error } = await supabase.rpc('set_gym_archive_state', {
+      p_gym_id: gymId,
+      p_is_archived: isArchived,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      console.error('Error updating gym archive state:', error);
+      return { data: null, error };
+    }
+
+    return {
+      data: (Array.isArray(data) ? data[0] : data) as {
+        gym_id: string;
+        is_archived: boolean;
+        archived_reason: string | null;
+        archived_at: string | null;
+      },
+      error: null,
+    };
+  },
+
+  async deleteGym(gymId: string) {
+    const { data, error } = await supabase.rpc('delete_gym_permanently', {
+      p_gym_id: gymId,
+    });
+
+    if (error) {
+      console.error('Error deleting gym permanently:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
   },
 
   async createGymWithAdmin(payload: {

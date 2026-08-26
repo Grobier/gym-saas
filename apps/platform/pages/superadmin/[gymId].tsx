@@ -20,6 +20,7 @@ export default function SuperAdminGymDetailPage() {
   const { gymId } = router.query;
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deletingGym, setDeletingGym] = useState(false);
   const [gym, setGym] = useState<SuperAdminGymOverview | null>(null);
   const [members, setMembers] = useState<SuperAdminGymMember[]>([]);
 
@@ -131,6 +132,73 @@ export default function SuperAdminGymDetailPage() {
     }
   };
 
+  const handleArchiveGym = async () => {
+    if (!gym) return;
+
+    const shouldArchive = !gym.is_archived;
+    const reason = shouldArchive
+      ? window.prompt(
+          `Razón para archivar ${gym.gym_name}. El gym quedará fuera del catálogo activo.`,
+          gym.archived_reason || ''
+        )
+      : '';
+
+    if (shouldArchive && reason === null) {
+      return;
+    }
+
+    setUpdatingStatus(true);
+    try {
+      const { error } = await superadminAPI.toggleGymArchive(
+        gym.gym_id,
+        shouldArchive,
+        shouldArchive ? reason || 'Archivado por superadministración' : undefined
+      );
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
+      }
+
+      toast.success(shouldArchive ? 'Gimnasio archivado' : 'Gimnasio restaurado');
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Archive gym detail error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo archivar el gimnasio');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteGym = async () => {
+    if (!gym) return;
+
+    const confirmation = window.prompt(
+      `Escribe ELIMINAR para borrar permanentemente ${gym.gym_name}. Solo funciona si no tiene datos relacionados.`
+    );
+
+    if (confirmation !== 'ELIMINAR') {
+      return;
+    }
+
+    setDeletingGym(true);
+    try {
+      const { error } = await superadminAPI.deleteGym(gym.gym_id);
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo eliminar el gimnasio');
+      }
+
+      toast.success('Gimnasio eliminado permanentemente');
+      router.push('/superadmin/gyms');
+    } catch (runtimeError: any) {
+      console.error('Delete gym detail error:', runtimeError);
+      toast.error(
+        runtimeError?.message || 'No se pudo eliminar. Si tiene datos, archívalo en su lugar.'
+      );
+    } finally {
+      setDeletingGym(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className={saStyles.shell}>
@@ -239,13 +307,31 @@ export default function SuperAdminGymDetailPage() {
             <button
               onClick={handleToggleGym}
               className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
-              disabled={updatingStatus}
+              disabled={updatingStatus || gym.is_archived}
             >
               {updatingStatus
                 ? 'Guardando...'
                 : gym.is_active
                   ? 'Bloquear Gimnasio'
                   : 'Activar Gimnasio'}
+            </button>
+            <button
+              onClick={handleArchiveGym}
+              className={saStyles.secondaryAction}
+              disabled={updatingStatus}
+            >
+              {updatingStatus
+                ? 'Guardando...'
+                : gym.is_archived
+                  ? 'Restaurar Gym'
+                  : 'Archivar Gym'}
+            </button>
+            <button
+              onClick={handleDeleteGym}
+              className={saStyles.ghostDangerAction}
+              disabled={deletingGym}
+            >
+              {deletingGym ? 'Eliminando...' : 'Eliminar Gym'}
             </button>
           </div>
         </section>
@@ -254,10 +340,12 @@ export default function SuperAdminGymDetailPage() {
           <div className={saStyles.metricGrid}>
             <article className={saStyles.metricCard}>
               <p className={saStyles.metricLabel}>Estado Operativo</p>
-              <p className={`${saStyles.metricValue} ${gym.is_active ? saStyles.toneSuccess : saStyles.toneWarning}`}>
-                {gym.is_active ? 'Activo' : 'Bloqueado'}
+              <p className={`${saStyles.metricValue} ${gym.is_archived ? saStyles.toneInfo : gym.is_active ? saStyles.toneSuccess : saStyles.toneWarning}`}>
+                {gym.is_archived ? 'Archivado' : gym.is_active ? 'Activo' : 'Bloqueado'}
               </p>
-              <div className={saStyles.metricHint}>{gym.blocked_reason || 'Sin restricciones'}</div>
+              <div className={saStyles.metricHint}>
+                {gym.archived_reason || gym.blocked_reason || 'Sin restricciones'}
+              </div>
             </article>
             <article className={saStyles.metricCard}>
               <p className={saStyles.metricLabel}>Admins</p>
