@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import ConfirmActionModal from '../../components/superadmin/ConfirmActionModal';
 import saStyles from '../../styles/superadmin.module.css';
 
 export default function SuperAdminGymsPage() {
@@ -20,6 +21,10 @@ export default function SuperAdminGymsPage() {
   const [updatingGymId, setUpdatingGymId] = useState<string | null>(null);
   const [deletingGymId, setDeletingGymId] = useState<string | null>(null);
   const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
+  const [archiveTarget, setArchiveTarget] = useState<SuperAdminGymOverview | null>(null);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<SuperAdminGymOverview | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -106,31 +111,48 @@ export default function SuperAdminGymsPage() {
   };
 
   const handleArchiveGym = async (gym: SuperAdminGymOverview) => {
-    const shouldArchive = !gym.is_archived;
-    const reason = shouldArchive
-      ? window.prompt(
-          `Razón para archivar ${gym.gym_name}. El gym quedará fuera de operación y de selección activa.`,
-          gym.archived_reason || ''
-        )
-      : '';
+    if (gym.is_archived) {
+      setUpdatingGymId(gym.gym_id);
+      try {
+        const { error } = await superadminAPI.toggleGymArchive(gym.gym_id, false);
 
-    if (shouldArchive && reason === null) {
+        if (error) {
+          throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
+        }
+
+        toast.success('Gimnasio restaurado');
+        await bootstrap();
+      } catch (runtimeError: any) {
+        console.error('Restore gym error:', runtimeError);
+        toast.error(runtimeError?.message || 'No se pudo restaurar el gimnasio');
+      } finally {
+        setUpdatingGymId(null);
+      }
       return;
     }
 
-    setUpdatingGymId(gym.gym_id);
+    setArchiveReason(gym.archived_reason || '');
+    setArchiveTarget(gym);
+  };
+
+  const confirmArchiveGym = async () => {
+    if (!archiveTarget) return;
+
+    setUpdatingGymId(archiveTarget.gym_id);
     try {
       const { error } = await superadminAPI.toggleGymArchive(
-        gym.gym_id,
-        shouldArchive,
-        shouldArchive ? reason || 'Archivado por superadministración' : undefined
+        archiveTarget.gym_id,
+        true,
+        archiveReason.trim()
       );
 
       if (error) {
         throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
       }
 
-      toast.success(shouldArchive ? 'Gimnasio archivado' : 'Gimnasio restaurado');
+      toast.success('Gimnasio archivado');
+      setArchiveTarget(null);
+      setArchiveReason('');
       await bootstrap();
     } catch (runtimeError: any) {
       console.error('Archive gym error:', runtimeError);
@@ -140,23 +162,24 @@ export default function SuperAdminGymsPage() {
     }
   };
 
-  const handleDeleteGym = async (gym: SuperAdminGymOverview) => {
-    const confirmation = window.prompt(
-      `Escribe ELIMINAR para borrar permanentemente ${gym.gym_name}. Solo funciona si no tiene datos relacionados.`
-    );
+  const handleDeleteGym = (gym: SuperAdminGymOverview) => {
+    setDeleteTarget(gym);
+    setDeleteConfirmation('');
+  };
 
-    if (confirmation !== 'ELIMINAR') {
-      return;
-    }
+  const confirmDeleteGym = async () => {
+    if (!deleteTarget) return;
 
-    setDeletingGymId(gym.gym_id);
+    setDeletingGymId(deleteTarget.gym_id);
     try {
-      const { error } = await superadminAPI.deleteGym(gym.gym_id);
+      const { error } = await superadminAPI.deleteGym(deleteTarget.gym_id);
       if (error) {
         throw new Error(typeof error === 'string' ? error : 'No se pudo eliminar el gimnasio');
       }
 
       toast.success('Gimnasio eliminado permanentemente');
+      setDeleteTarget(null);
+      setDeleteConfirmation('');
       await bootstrap();
     } catch (runtimeError: any) {
       console.error('Delete gym error:', runtimeError);
@@ -185,152 +208,208 @@ export default function SuperAdminGymsPage() {
   const gymsWithoutAdmin = gyms.filter((gym) => gym.admin_count === 0).length;
 
   return (
-    <div className={saStyles.shell}>
-      <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
+    <>
+      <div className={saStyles.shell}>
+        <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
 
-      <main className={saStyles.main}>
-        <section className={saStyles.hero}>
-          <div>
-            <span className={saStyles.eyebrow}>Gym Directory</span>
-            <h1 className={saStyles.title}>Gimnasios</h1>
-            <p className={saStyles.subtitle}>
-              Directorio completo de sedes para revisar operación, equipo asignado y acceso.
-            </p>
-          </div>
-          <div className={saStyles.heroActions}>
-            <button
-              onClick={() => router.push('/superadmin/create-gym')}
-              className={saStyles.primaryAction}
-            >
-              Crear Gym
-            </button>
-          </div>
-        </section>
+        <main className={saStyles.main}>
+          <section className={saStyles.hero}>
+            <div>
+              <span className={saStyles.eyebrow}>Gym Directory</span>
+              <h1 className={saStyles.title}>Gimnasios</h1>
+              <p className={saStyles.subtitle}>
+                Directorio completo de sedes para revisar operación, equipo asignado y acceso.
+              </p>
+            </div>
+            <div className={saStyles.heroActions}>
+              <button
+                onClick={() => router.push('/superadmin/create-gym')}
+                className={saStyles.primaryAction}
+              >
+                Crear Gym
+              </button>
+            </div>
+          </section>
 
-        <section className={saStyles.section}>
-          <div className={saStyles.metricGrid}>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Total</p>
-              <p className={saStyles.metricValue}>{gyms.length}</p>
-              <div className={saStyles.metricHint}>Sedes registradas</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Operativos</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneSuccess}`}>{activeGyms}</p>
-              <div className={saStyles.metricHint}>Acceso habilitado</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Bloqueados</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>{blockedGyms}</p>
-              <div className={saStyles.metricHint}>Sin acceso operativo</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Archivados</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>{archivedGyms}</p>
-              <div className={saStyles.metricHint}>Fuera del catálogo activo</div>
-            </article>
-            <article className={saStyles.metricCard}>
-              <p className={saStyles.metricLabel}>Sin Admin</p>
-              <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>{gymsWithoutAdmin}</p>
-              <div className={saStyles.metricHint}>Requieren asignación</div>
-            </article>
-          </div>
-        </section>
+          <section className={saStyles.section}>
+            <div className={saStyles.metricGrid}>
+              <article className={saStyles.metricCard}>
+                <p className={saStyles.metricLabel}>Total</p>
+                <p className={saStyles.metricValue}>{gyms.length}</p>
+                <div className={saStyles.metricHint}>Sedes registradas</div>
+              </article>
+              <article className={saStyles.metricCard}>
+                <p className={saStyles.metricLabel}>Operativos</p>
+                <p className={`${saStyles.metricValue} ${saStyles.toneSuccess}`}>{activeGyms}</p>
+                <div className={saStyles.metricHint}>Acceso habilitado</div>
+              </article>
+              <article className={saStyles.metricCard}>
+                <p className={saStyles.metricLabel}>Bloqueados</p>
+                <p className={`${saStyles.metricValue} ${saStyles.toneWarning}`}>{blockedGyms}</p>
+                <div className={saStyles.metricHint}>Sin acceso operativo</div>
+              </article>
+              <article className={saStyles.metricCard}>
+                <p className={saStyles.metricLabel}>Archivados</p>
+                <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>{archivedGyms}</p>
+                <div className={saStyles.metricHint}>Fuera del catálogo activo</div>
+              </article>
+              <article className={saStyles.metricCard}>
+                <p className={saStyles.metricLabel}>Sin Admin</p>
+                <p className={`${saStyles.metricValue} ${saStyles.toneInfo}`}>
+                  {gymsWithoutAdmin}
+                </p>
+                <div className={saStyles.metricHint}>Requieren asignación</div>
+              </article>
+            </div>
+          </section>
 
-        <section className={saStyles.section}>
-          <div className={saStyles.panel}>
-            <table className={saStyles.table}>
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Equipo</th>
-                  <th>Operación</th>
-                  <th>Plan</th>
-                  <th>Ingresos/Mes</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gyms.map((gym) => (
-                  <tr key={gym.gym_id}>
-                    <td className={saStyles.nameCell}>
-                      <div>{gym.gym_name}</div>
-                      <div className={saStyles.microCopy}>{gym.city || 'Sin ciudad'}</div>
-                    </td>
-                    <td>
-                      <div className={saStyles.inlineMetricRow}>
-                        <span className={`${saStyles.pill} ${saStyles.pillBlue}`}>{gym.admin_count} admin</span>
-                        <span className={`${saStyles.pill} ${saStyles.pillGreen}`}>{gym.coach_count} coach</span>
-                        <span className={`${saStyles.pill} ${saStyles.pillAmber}`}>{gym.student_count} alumnos</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className={saStyles.statusPill}
-                        style={{
-                          backgroundColor: gym.is_archived
-                            ? '#7c8798'
-                            : gym.is_active
-                              ? '#10b981'
-                              : '#ef4444',
-                        }}
-                      >
-                        {gym.is_archived ? 'Archivado' : gym.is_active ? 'Operativo' : 'Bloqueado'}
-                      </span>
-                      {(gym.archived_reason || gym.blocked_reason) && (
-                        <div className={saStyles.microCopy}>
-                          {gym.archived_reason || gym.blocked_reason}
-                        </div>
-                      )}
-                    </td>
-                    <td>{gym.subscription_plan || 'Sin registro'}</td>
-                    <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
-                    <td>
-                      <div className={saStyles.inlineActions}>
-                        <button
-                          onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
-                          className={saStyles.secondaryAction}
-                        >
-                          Abrir ecosistema
-                        </button>
-                        <button
-                          onClick={() => handleToggleGym(gym)}
-                          disabled={updatingGymId === gym.gym_id || gym.is_archived}
-                          className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
-                        >
-                          {updatingGymId === gym.gym_id
-                            ? 'Guardando...'
-                            : gym.is_active
-                              ? 'Bloquear'
-                              : 'Activar'}
-                        </button>
-                        <button
-                          onClick={() => handleArchiveGym(gym)}
-                          disabled={updatingGymId === gym.gym_id}
-                          className={saStyles.secondaryAction}
-                        >
-                          {updatingGymId === gym.gym_id
-                            ? 'Guardando...'
-                            : gym.is_archived
-                              ? 'Restaurar'
-                              : 'Archivar'}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGym(gym)}
-                          disabled={deletingGymId === gym.gym_id}
-                          className={saStyles.ghostDangerAction}
-                        >
-                          {deletingGymId === gym.gym_id ? 'Eliminando...' : 'Eliminar'}
-                        </button>
-                      </div>
-                    </td>
+          <section className={saStyles.section}>
+            <div className={saStyles.panel}>
+              <table className={saStyles.table}>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Equipo</th>
+                    <th>Operación</th>
+                    <th>Plan</th>
+                    <th>Ingresos/Mes</th>
+                    <th>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
+                </thead>
+                <tbody>
+                  {gyms.map((gym) => (
+                    <tr key={gym.gym_id}>
+                      <td className={saStyles.nameCell}>
+                        <div>{gym.gym_name}</div>
+                        <div className={saStyles.microCopy}>{gym.city || 'Sin ciudad'}</div>
+                      </td>
+                      <td>
+                        <div className={saStyles.inlineMetricRow}>
+                          <span className={`${saStyles.pill} ${saStyles.pillBlue}`}>
+                            {gym.admin_count} admin
+                          </span>
+                          <span className={`${saStyles.pill} ${saStyles.pillGreen}`}>
+                            {gym.coach_count} coach
+                          </span>
+                          <span className={`${saStyles.pill} ${saStyles.pillAmber}`}>
+                            {gym.student_count} alumnos
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={saStyles.statusPill}
+                          style={{
+                            backgroundColor: gym.is_archived
+                              ? '#7c8798'
+                              : gym.is_active
+                                ? '#10b981'
+                                : '#ef4444',
+                          }}
+                        >
+                          {gym.is_archived ? 'Archivado' : gym.is_active ? 'Operativo' : 'Bloqueado'}
+                        </span>
+                        {(gym.archived_reason || gym.blocked_reason) && (
+                          <div className={saStyles.microCopy}>
+                            {gym.archived_reason || gym.blocked_reason}
+                          </div>
+                        )}
+                      </td>
+                      <td>{gym.subscription_plan || 'Sin registro'}</td>
+                      <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
+                      <td>
+                        <div className={saStyles.inlineActions}>
+                          <button
+                            onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
+                            className={saStyles.secondaryAction}
+                          >
+                            Abrir ecosistema
+                          </button>
+                          <button
+                            onClick={() => handleToggleGym(gym)}
+                            disabled={updatingGymId === gym.gym_id || gym.is_archived}
+                            className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
+                          >
+                            {updatingGymId === gym.gym_id
+                              ? 'Guardando...'
+                              : gym.is_active
+                                ? 'Bloquear'
+                                : 'Activar'}
+                          </button>
+                          <button
+                            onClick={() => handleArchiveGym(gym)}
+                            disabled={updatingGymId === gym.gym_id}
+                            className={saStyles.secondaryAction}
+                          >
+                            {updatingGymId === gym.gym_id
+                              ? 'Guardando...'
+                              : gym.is_archived
+                                ? 'Restaurar'
+                                : 'Archivar'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGym(gym)}
+                            disabled={deletingGymId === gym.gym_id}
+                            className={saStyles.ghostDangerAction}
+                          >
+                            {deletingGymId === gym.gym_id ? 'Eliminando...' : 'Eliminar'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <ConfirmActionModal
+        open={Boolean(archiveTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveTarget(null);
+            setArchiveReason('');
+          }
+        }}
+        title="Archivar gimnasio"
+        description={
+          archiveTarget
+            ? `Archivarás ${archiveTarget.gym_name}. Quedará fuera de operación y del catálogo activo.`
+            : ''
+        }
+        confirmLabel="Archivar gym"
+        onConfirm={confirmArchiveGym}
+        isLoading={Boolean(archiveTarget && updatingGymId === archiveTarget.gym_id)}
+        reasonLabel="Motivo del archivado"
+        reasonValue={archiveReason}
+        onReasonChange={setArchiveReason}
+        reasonPlaceholder="Ej. cierre temporal, fusión de sede, limpieza operativa."
+      />
+
+      <ConfirmActionModal
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteConfirmation('');
+          }
+        }}
+        title="Eliminar gimnasio"
+        description={
+          deleteTarget
+            ? `Escribe ELIMINAR para borrar permanentemente ${deleteTarget.gym_name}. Solo funciona si no tiene datos relacionados.`
+            : ''
+        }
+        confirmLabel="Eliminar definitivamente"
+        onConfirm={confirmDeleteGym}
+        isLoading={Boolean(deleteTarget && deletingGymId === deleteTarget.gym_id)}
+        tone="danger"
+        requiredText="ELIMINAR"
+        typedValue={deleteConfirmation}
+        onTypedValueChange={setDeleteConfirmation}
+      />
+    </>
   );
 }

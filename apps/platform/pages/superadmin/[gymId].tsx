@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import ConfirmActionModal from '../../components/superadmin/ConfirmActionModal';
 import saStyles from '../../styles/superadmin.module.css';
 
 export default function SuperAdminGymDetailPage() {
@@ -23,6 +24,10 @@ export default function SuperAdminGymDetailPage() {
   const [deletingGym, setDeletingGym] = useState(false);
   const [gym, setGym] = useState<SuperAdminGymOverview | null>(null);
   const [members, setMembers] = useState<SuperAdminGymMember[]>([]);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -135,31 +140,21 @@ export default function SuperAdminGymDetailPage() {
   const handleArchiveGym = async () => {
     if (!gym) return;
 
-    const shouldArchive = !gym.is_archived;
-    const reason = shouldArchive
-      ? window.prompt(
-          `Razón para archivar ${gym.gym_name}. El gym quedará fuera del catálogo activo.`,
-          gym.archived_reason || ''
-        )
-      : '';
-
-    if (shouldArchive && reason === null) {
+    if (!gym.is_archived) {
+      setArchiveReason(gym.archived_reason || '');
+      setArchiveOpen(true);
       return;
     }
 
     setUpdatingStatus(true);
     try {
-      const { error } = await superadminAPI.toggleGymArchive(
-        gym.gym_id,
-        shouldArchive,
-        shouldArchive ? reason || 'Archivado por superadministración' : undefined
-      );
+      const { error } = await superadminAPI.toggleGymArchive(gym.gym_id, false);
 
       if (error) {
         throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
       }
 
-      toast.success(shouldArchive ? 'Gimnasio archivado' : 'Gimnasio restaurado');
+      toast.success('Gimnasio restaurado');
       await bootstrap();
     } catch (runtimeError: any) {
       console.error('Archive gym detail error:', runtimeError);
@@ -169,16 +164,36 @@ export default function SuperAdminGymDetailPage() {
     }
   };
 
-  const handleDeleteGym = async () => {
+  const confirmArchiveGym = async () => {
     if (!gym) return;
 
-    const confirmation = window.prompt(
-      `Escribe ELIMINAR para borrar permanentemente ${gym.gym_name}. Solo funciona si no tiene datos relacionados.`
-    );
+    setUpdatingStatus(true);
+    try {
+      const { error } = await superadminAPI.toggleGymArchive(gym.gym_id, true, archiveReason.trim());
 
-    if (confirmation !== 'ELIMINAR') {
-      return;
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el archivo');
+      }
+
+      toast.success('Gimnasio archivado');
+      setArchiveOpen(false);
+      setArchiveReason('');
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Confirm archive gym detail error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo archivar el gimnasio');
+    } finally {
+      setUpdatingStatus(false);
     }
+  };
+
+  const handleDeleteGym = () => {
+    setDeleteConfirmation('');
+    setDeleteOpen(true);
+  };
+
+  const confirmDeleteGym = async () => {
+    if (!gym) return;
 
     setDeletingGym(true);
     try {
@@ -188,6 +203,8 @@ export default function SuperAdminGymDetailPage() {
       }
 
       toast.success('Gimnasio eliminado permanentemente');
+      setDeleteOpen(false);
+      setDeleteConfirmation('');
       router.push('/superadmin/gyms');
     } catch (runtimeError: any) {
       console.error('Delete gym detail error:', runtimeError);
@@ -285,10 +302,11 @@ export default function SuperAdminGymDetailPage() {
   );
 
   return (
-    <div className={saStyles.shell}>
-      <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
+    <>
+      <div className={saStyles.shell}>
+        <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
 
-      <main className={saStyles.main}>
+        <main className={saStyles.main}>
         <section className={saStyles.hero}>
           <div>
             <span className={saStyles.eyebrow}>Gym Detail</span>
@@ -496,7 +514,54 @@ export default function SuperAdminGymDetailPage() {
           students,
           'No hay alumnos registrados en este gimnasio.'
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+
+      <ConfirmActionModal
+        open={archiveOpen}
+        onOpenChange={(open) => {
+          setArchiveOpen(open);
+          if (!open) {
+            setArchiveReason('');
+          }
+        }}
+        title="Archivar gimnasio"
+        description={
+          gym
+            ? `Archivarás ${gym.gym_name}. Quedará fuera del catálogo activo y sin operación.`
+            : ''
+        }
+        confirmLabel="Archivar gym"
+        onConfirm={confirmArchiveGym}
+        isLoading={updatingStatus}
+        reasonLabel="Motivo del archivado"
+        reasonValue={archiveReason}
+        onReasonChange={setArchiveReason}
+        reasonPlaceholder="Ej. cierre temporal, consolidación de sedes o limpieza operativa."
+      />
+
+      <ConfirmActionModal
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) {
+            setDeleteConfirmation('');
+          }
+        }}
+        title="Eliminar gimnasio"
+        description={
+          gym
+            ? `Escribe ELIMINAR para borrar permanentemente ${gym.gym_name}. Solo funciona si no tiene datos relacionados.`
+            : ''
+        }
+        confirmLabel="Eliminar definitivamente"
+        onConfirm={confirmDeleteGym}
+        isLoading={deletingGym}
+        tone="danger"
+        requiredText="ELIMINAR"
+        typedValue={deleteConfirmation}
+        onTypedValueChange={setDeleteConfirmation}
+      />
+    </>
   );
 }
