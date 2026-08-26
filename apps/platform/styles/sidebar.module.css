@@ -21,11 +21,11 @@
 }
 
 .sidebar {
-  width: 280px;
+  width: 236px;
   height: 100vh;
   background: #1f2937;
   color: white;
-  padding: 2rem 1.5rem;
+  padding: 1.35rem 1rem;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
   position: sticky;
@@ -33,18 +33,18 @@
 }
 
 .sidebarSuperadmin {
-  background: linear-gradient(180deg, rgba(73, 81, 101, 0.92) 0%, rgba(84, 93, 114, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(91, 99, 118, 0.94) 0%, rgba(101, 109, 127, 0.92) 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
-    14px 0 34px rgba(15, 23, 42, 0.08),
+    10px 0 24px rgba(15, 23, 42, 0.06),
     inset -1px 0 0 rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(22px) saturate(120%);
-  -webkit-backdrop-filter: blur(22px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
 }
 
 .userSection {
-  margin-bottom: 2rem;
-  padding-bottom: 1.25rem;
+  margin-bottom: 1.4rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -53,7 +53,7 @@
 }
 
 .brandBlock {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.7rem;
 }
 
 .brandBadge {
@@ -71,27 +71,27 @@
 }
 
 .brandCopy {
-  margin-top: 0.6rem;
-  font-size: 1rem;
-  font-weight: 650;
+  margin-top: 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 620;
   letter-spacing: -0.04em;
   color: white;
 }
 
 .userName {
   font-weight: 600;
-  font-size: 0.82rem;
-  margin-bottom: 0.16rem;
+  font-size: 0.72rem;
+  margin-bottom: 0.12rem;
 }
 
 .userRole {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: capitalize;
 }
 
 .nav {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .navTitle {
@@ -100,8 +100,8 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.46);
-  margin-bottom: 0.85rem;
-  margin-top: 1.2rem;
+  margin-bottom: 0.7rem;
+  margin-top: 1rem;
 }
 
 .nav .navTitle {
@@ -110,37 +110,37 @@
 
 .navLink {
   display: block;
-  padding: 0.72rem 0.88rem;
-  color: rgba(255, 255, 255, 0.74);
+  padding: 0.62rem 0.72rem;
+  color: rgba(255, 255, 255, 0.72);
   text-decoration: none;
-  border-radius: 14px;
-  margin-bottom: 0.38rem;
+  border-radius: 12px;
+  margin-bottom: 0.3rem;
   transition: all 0.2s ease;
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.76rem;
+  font-weight: 520;
 }
 
 .navLinkSuperadmin {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.028);
   border: 1px solid transparent;
 }
 
 .navLink:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
   color: white;
 }
 
 .navLink.active {
-  background: #007bff;
+  background: rgba(255, 255, 255, 0.1);
   color: white;
   font-weight: 600;
 }
 
 .activeSuperadmin {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.115);
+  border-color: rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.08),
+    0 6px 16px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -177,20 +177,20 @@
 
 .logoutSection {
   margin-top: auto;
-  padding-top: 1.2rem;
+  padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .logoutBtn {
   width: 100%;
-  padding: 0.72rem 0.9rem;
-  background: rgba(255, 255, 255, 0.08);
+  padding: 0.62rem 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -213,8 +213,8 @@
 /* Tablet */
 @media (max-width: 1024px) {
   .sidebar {
-    width: 250px;
-    padding: 1.5rem;
+    width: 220px;
+    padding: 1.15rem 0.9rem;
   }
 }
 
@@ -229,7 +229,7 @@
     left: 0;
     top: 0;
     height: 100vh;
-    width: 280px;
+    width: 236px;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     z-index: 100;
