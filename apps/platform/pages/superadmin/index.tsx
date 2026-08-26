@@ -13,7 +13,6 @@ import {
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
-import CreateGymForm from '../../components/superadmin/CreateGymForm';
 import saStyles from '../../styles/superadmin.module.css';
 
 interface ConsolidatedMetrics {
@@ -286,33 +285,28 @@ export default function SuperAdminDashboard() {
         </section>
 
         <section className={saStyles.section}>
-          <div className={saStyles.controlGrid}>
-            <div className={saStyles.formCard}>
-              <div className={saStyles.sectionHeader}>
-                <div>
-                  <h2 className={saStyles.sectionTitle}>Alta de Gimnasio</h2>
-                  <p className={saStyles.sectionCopy}>
-                    Crea la sede y deja su cuenta administradora operativa desde el inicio.
-                  </p>
-                </div>
-              </div>
-
-              <CreateGymForm onCreated={bootstrap} />
-            </div>
-
-            <div className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
+          <div className={saStyles.summaryGrid}>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentInfo}`}>
               <p className={saStyles.summaryCardTitle}>Operación de Plataforma</p>
               <p className={saStyles.summaryValue}>{metrics.operationalGyms}</p>
               <p className={saStyles.sectionCopy}>
-                El bloqueo de un gimnasio corta el acceso operativo de admin, coaches y alumnos
-                asociados al contexto de esa sede.
+                Sedes con acceso habilitado para administradores, coaches y alumnos.
               </p>
-              <div className={saStyles.noticeList}>
-                <span>Alta centralizada de gimnasios</span>
-                <span>Creación inmediata de cuenta admin</span>
-                <span>Bloqueo / reactivación por sede</span>
-              </div>
-            </div>
+            </article>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentSuccess}`}>
+              <p className={saStyles.summaryCardTitle}>Bloqueos Aplicados</p>
+              <p className={saStyles.summaryValue}>{metrics.blockedGyms}</p>
+              <p className={saStyles.sectionCopy}>
+                Los bloqueos se gestionan desde la sección `Gimnasios`.
+              </p>
+            </article>
+            <article className={`${saStyles.summaryCard} ${saStyles.summaryAccentDanger}`}>
+              <p className={saStyles.summaryCardTitle}>Gestión Centralizada</p>
+              <p className={saStyles.summaryValue}>{metrics.totalGyms}</p>
+              <p className={saStyles.sectionCopy}>
+                Crea nuevas sedes únicamente desde la vista donde ves todos los gimnasios.
+              </p>
+            </article>
           </div>
         </section>
 

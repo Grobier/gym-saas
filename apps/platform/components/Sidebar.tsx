@@ -30,7 +30,6 @@ export default function Sidebar({
         return [
           { label: 'Resumen', href: '/superadmin' },
           { label: 'Gimnasios', href: '/superadmin/gyms' },
-          { label: 'Crear Gym', href: '/superadmin/create-gym' },
           { label: 'Administradores', href: '/superadmin/admins' },
           { label: 'Coaches', href: '/superadmin/coaches' },
           { label: 'Alumnos', href: '/superadmin/students' },
