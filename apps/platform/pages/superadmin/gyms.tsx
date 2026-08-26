@@ -202,10 +202,94 @@ export default function SuperAdminGymsPage() {
   }
 
   const visibleGyms = gyms.filter((gym) => !gym.is_archived);
-  const archivedGyms = gyms.filter((gym) => gym.is_archived).length;
+  const archivedGymList = gyms.filter((gym) => gym.is_archived);
+  const archivedGyms = archivedGymList.length;
   const activeGyms = visibleGyms.filter((gym) => gym.is_active).length;
-  const blockedGyms = gyms.filter((gym) => !gym.is_active).length;
+  const blockedGyms = visibleGyms.filter((gym) => !gym.is_active).length;
   const gymsWithoutAdmin = gyms.filter((gym) => gym.admin_count === 0).length;
+
+  const renderGymRows = (gymList: SuperAdminGymOverview[]) =>
+    gymList.map((gym) => (
+      <tr key={gym.gym_id}>
+        <td className={saStyles.nameCell}>
+          <div>{gym.gym_name}</div>
+          <div className={saStyles.microCopy}>{gym.city || 'Sin ciudad'}</div>
+        </td>
+        <td>
+          <div className={saStyles.inlineMetricRow}>
+            <span className={`${saStyles.pill} ${saStyles.pillBlue}`}>
+              {gym.admin_count} admin
+            </span>
+            <span className={`${saStyles.pill} ${saStyles.pillGreen}`}>
+              {gym.coach_count} coach
+            </span>
+            <span className={`${saStyles.pill} ${saStyles.pillAmber}`}>
+              {gym.student_count} alumnos
+            </span>
+          </div>
+        </td>
+        <td>
+          <span
+            className={saStyles.statusPill}
+            style={{
+              backgroundColor: gym.is_archived
+                ? '#7c8798'
+                : gym.is_active
+                  ? '#10b981'
+                  : '#ef4444',
+            }}
+          >
+            {gym.is_archived ? 'Archivado' : gym.is_active ? 'Operativo' : 'Bloqueado'}
+          </span>
+          {(gym.archived_reason || gym.blocked_reason) && (
+            <div className={saStyles.microCopy}>
+              {gym.archived_reason || gym.blocked_reason}
+            </div>
+          )}
+        </td>
+        <td>{gym.subscription_plan || 'Sin registro'}</td>
+        <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
+        <td>
+          <div className={saStyles.inlineActions}>
+            <button
+              onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
+              className={saStyles.secondaryAction}
+            >
+              Abrir ecosistema
+            </button>
+            <button
+              onClick={() => handleToggleGym(gym)}
+              disabled={updatingGymId === gym.gym_id || gym.is_archived}
+              className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
+            >
+              {updatingGymId === gym.gym_id
+                ? 'Guardando...'
+                : gym.is_active
+                  ? 'Bloquear'
+                  : 'Activar'}
+            </button>
+            <button
+              onClick={() => handleArchiveGym(gym)}
+              disabled={updatingGymId === gym.gym_id}
+              className={saStyles.secondaryAction}
+            >
+              {updatingGymId === gym.gym_id
+                ? 'Guardando...'
+                : gym.is_archived
+                  ? 'Restaurar'
+                  : 'Archivar'}
+            </button>
+            <button
+              onClick={() => handleDeleteGym(gym)}
+              disabled={deletingGymId === gym.gym_id}
+              className={saStyles.ghostDangerAction}
+            >
+              {deletingGymId === gym.gym_id ? 'Eliminando...' : 'Eliminar'}
+            </button>
+          </div>
+        </td>
+      </tr>
+    ));
 
   return (
     <>
@@ -264,102 +348,63 @@ export default function SuperAdminGymsPage() {
           </section>
 
           <section className={saStyles.section}>
+            <div className={saStyles.sectionHeader}>
+              <div>
+                <h2 className={saStyles.sectionTitle}>Catálogo activo</h2>
+                <p className={saStyles.sectionCopy}>
+                  Gimnasios operativos o bloqueados que siguen dentro de la red visible.
+                </p>
+              </div>
+            </div>
             <div className={saStyles.panel}>
-              <table className={saStyles.table}>
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Equipo</th>
-                    <th>Operación</th>
-                    <th>Plan</th>
-                    <th>Ingresos/Mes</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gyms.map((gym) => (
-                    <tr key={gym.gym_id}>
-                      <td className={saStyles.nameCell}>
-                        <div>{gym.gym_name}</div>
-                        <div className={saStyles.microCopy}>{gym.city || 'Sin ciudad'}</div>
-                      </td>
-                      <td>
-                        <div className={saStyles.inlineMetricRow}>
-                          <span className={`${saStyles.pill} ${saStyles.pillBlue}`}>
-                            {gym.admin_count} admin
-                          </span>
-                          <span className={`${saStyles.pill} ${saStyles.pillGreen}`}>
-                            {gym.coach_count} coach
-                          </span>
-                          <span className={`${saStyles.pill} ${saStyles.pillAmber}`}>
-                            {gym.student_count} alumnos
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={saStyles.statusPill}
-                          style={{
-                            backgroundColor: gym.is_archived
-                              ? '#7c8798'
-                              : gym.is_active
-                                ? '#10b981'
-                                : '#ef4444',
-                          }}
-                        >
-                          {gym.is_archived ? 'Archivado' : gym.is_active ? 'Operativo' : 'Bloqueado'}
-                        </span>
-                        {(gym.archived_reason || gym.blocked_reason) && (
-                          <div className={saStyles.microCopy}>
-                            {gym.archived_reason || gym.blocked_reason}
-                          </div>
-                        )}
-                      </td>
-                      <td>{gym.subscription_plan || 'Sin registro'}</td>
-                      <td>${(gym.monthly_revenue / 1000).toFixed(0)}k</td>
-                      <td>
-                        <div className={saStyles.inlineActions}>
-                          <button
-                            onClick={() => router.push(`/superadmin/${gym.gym_id}`)}
-                            className={saStyles.secondaryAction}
-                          >
-                            Abrir ecosistema
-                          </button>
-                          <button
-                            onClick={() => handleToggleGym(gym)}
-                            disabled={updatingGymId === gym.gym_id || gym.is_archived}
-                            className={gym.is_active ? saStyles.dangerAction : saStyles.primaryAction}
-                          >
-                            {updatingGymId === gym.gym_id
-                              ? 'Guardando...'
-                              : gym.is_active
-                                ? 'Bloquear'
-                                : 'Activar'}
-                          </button>
-                          <button
-                            onClick={() => handleArchiveGym(gym)}
-                            disabled={updatingGymId === gym.gym_id}
-                            className={saStyles.secondaryAction}
-                          >
-                            {updatingGymId === gym.gym_id
-                              ? 'Guardando...'
-                              : gym.is_archived
-                                ? 'Restaurar'
-                                : 'Archivar'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteGym(gym)}
-                            disabled={deletingGymId === gym.gym_id}
-                            className={saStyles.ghostDangerAction}
-                          >
-                            {deletingGymId === gym.gym_id ? 'Eliminando...' : 'Eliminar'}
-                          </button>
-                        </div>
-                      </td>
+              {visibleGyms.length === 0 ? (
+                <div className={saStyles.emptyInline}>No hay gimnasios activos o bloqueados.</div>
+              ) : (
+                <table className={saStyles.table}>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Equipo</th>
+                      <th>Operación</th>
+                      <th>Plan</th>
+                      <th>Ingresos/Mes</th>
+                      <th>Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>{renderGymRows(visibleGyms)}</tbody>
+                </table>
+              )}
+            </div>
+          </section>
+
+          <section className={saStyles.section}>
+            <div className={saStyles.sectionHeader}>
+              <div>
+                <h2 className={saStyles.sectionTitle}>Archivados</h2>
+                <p className={saStyles.sectionCopy}>
+                  Sedes fuera de operación, conservadas para restauración posterior.
+                </p>
+              </div>
+              <div className={saStyles.archiveCount}>{archivedGyms} archivados</div>
+            </div>
+            <div className={saStyles.panel}>
+              {archivedGymList.length === 0 ? (
+                <div className={saStyles.emptyInline}>No hay gimnasios archivados.</div>
+              ) : (
+                <table className={saStyles.table}>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Equipo</th>
+                      <th>Operación</th>
+                      <th>Plan</th>
+                      <th>Ingresos/Mes</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderGymRows(archivedGymList)}</tbody>
+                </table>
+              )}
             </div>
           </section>
         </main>

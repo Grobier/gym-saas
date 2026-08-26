@@ -279,6 +279,19 @@
   font-size: 0.72rem;
 }
 
+.archiveCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.34rem 0.68rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #5f6d82;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+}
+
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
