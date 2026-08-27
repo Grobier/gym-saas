@@ -227,7 +227,7 @@ export const userAccessAPI = {
 
       const fallback = await supabase
         .from('gym_access')
-        .select('gym_id, role')
+        .select('gym_id, role, gyms(name)')
         .eq('user_id', authUser.user.id)
         .order('gym_id');
 
@@ -268,14 +268,20 @@ export const userAccessAPI = {
         ])
       );
 
-      const filteredRoles = fallbackRoles.filter((role) => {
-        const state = stateMap.get(role.gym_id);
-        if (!state) {
-          return true;
-        }
+      const filteredRoles = fallbackRoles
+        .filter((role) => {
+          const state = stateMap.get(role.gym_id);
+          if (!state) {
+            return true;
+          }
 
-        return state.is_active !== false && state.is_archived !== true;
-      });
+          return state.is_active !== false && state.is_archived !== true;
+        })
+        .map((role: any) => ({
+          gym_id: role.gym_id,
+          role: role.role,
+          gym_name: role.gyms?.name || undefined,
+        }));
 
       return { data: filteredRoles, error: null };
     } catch (error: any) {
