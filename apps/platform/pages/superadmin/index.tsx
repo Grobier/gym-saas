@@ -8,6 +8,7 @@ import {
   authAPI,
   convertSupabaseUser,
   superadminAPI,
+  userAccessAPI,
   SuperAdminGymOverview,
 } from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
@@ -32,6 +33,7 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingGymId, setUpdatingGymId] = useState<string | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<ConsolidatedMetrics>({
     totalGyms: 0,
     operationalGyms: 0,
@@ -76,6 +78,12 @@ export default function SuperAdminDashboard() {
       }
 
       setUser(currentUser);
+
+      // Obtener roles disponibles del usuario
+      const { data: rolesData } = await userAccessAPI.getMyRoles();
+      if (rolesData) {
+        setAvailableRoles(rolesData);
+      }
 
       const { data: gymsData, error: gymsError } = await superadminAPI.getGymOverview();
 
@@ -211,7 +219,7 @@ export default function SuperAdminDashboard() {
         role="superadmin"
         userName={user?.name || user?.email}
         onLogout={handleLogout}
-        availableRoles={[{ gym_id: 'platform', role: 'superadmin', gym_name: 'Plataforma' }]}
+        availableRoles={availableRoles}
       />
 
       <main className={saStyles.main}>

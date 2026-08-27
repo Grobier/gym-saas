@@ -7,6 +7,7 @@ import {
   authAPI,
   convertSupabaseUser,
   superadminAPI,
+  userAccessAPI,
   SuperAdminGymMember,
   SuperAdminGymOverview,
 } from '../../lib/supabase-api';
@@ -31,6 +32,7 @@ export default function SuperAdminGymDetailPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [savingGymInfo, setSavingGymInfo] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -63,6 +65,11 @@ export default function SuperAdminGymDetailPage() {
       }
 
       setUser(currentUser);
+
+      const { data: rolesData } = await userAccessAPI.getMyRoles();
+      if (rolesData) {
+        setAvailableRoles(rolesData);
+      }
 
       const [{ data: overview, error: overviewError }, { data: gymMembers, error: membersError }] =
         await Promise.all([
@@ -337,7 +344,7 @@ export default function SuperAdminGymDetailPage() {
           role="superadmin"
           userName={user?.name || user?.email}
           onLogout={handleLogout}
-          availableRoles={[{ gym_id: 'platform', role: 'superadmin', gym_name: 'Plataforma' }]}
+          availableRoles={availableRoles}
         />
 
         <main className={saStyles.main}>

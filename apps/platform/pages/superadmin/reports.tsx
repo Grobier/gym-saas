@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
-import { authAPI, convertSupabaseUser, superadminAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
+import { authAPI, convertSupabaseUser, superadminAPI, userAccessAPI, SuperAdminGymOverview } from '../../lib/supabase-api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
@@ -14,6 +14,7 @@ export default function SuperAdminReportsPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
   const [gyms, setGyms] = useState<SuperAdminGymOverview[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -44,6 +45,11 @@ export default function SuperAdminReportsPage() {
       }
 
       setUser(currentUser);
+
+      const { data: rolesData } = await userAccessAPI.getMyRoles();
+      if (rolesData) {
+        setAvailableRoles(rolesData);
+      }
 
       const { data: gymsData, error: gymsError } = await superadminAPI.getGymOverview();
       if (gymsError) {
@@ -161,7 +167,7 @@ export default function SuperAdminReportsPage() {
         role="superadmin"
         userName={user?.name || user?.email}
         onLogout={handleLogout}
-        availableRoles={[{ gym_id: 'platform', role: 'superadmin', gym_name: 'Plataforma' }]}
+        availableRoles={availableRoles}
       />
 
       <main className={saStyles.main}>
