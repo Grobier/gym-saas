@@ -207,7 +207,12 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className={saStyles.shell}>
-      <Sidebar role="superadmin" userName={user?.name || user?.email} onLogout={handleLogout} />
+      <Sidebar
+        role="superadmin"
+        userName={user?.name || user?.email}
+        onLogout={handleLogout}
+        availableRoles={[{ gym_id: 'platform', role: 'superadmin', gym_name: 'Plataforma' }]}
+      />
 
       <main className={saStyles.main}>
         <section className={saStyles.hero}>

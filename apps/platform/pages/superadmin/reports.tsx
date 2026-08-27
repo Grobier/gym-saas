@@ -161,6 +161,7 @@ export default function SuperAdminReportsPage() {
         role="superadmin"
         userName={user?.name || user?.email}
         onLogout={handleLogout}
+        availableRoles={[{ gym_id: 'platform', role: 'superadmin', gym_name: 'Plataforma' }]}
       />
 
       <main className={saStyles.main}>
