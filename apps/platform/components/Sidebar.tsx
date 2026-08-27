@@ -162,23 +162,31 @@ export default function Sidebar({
         {/* Role Switcher */}
         {availableRoles.length > 0 && (
           <div className={styles.roleSwitcher}>
-            <h3 className={styles.navTitle}>Cambiar Rol</h3>
-            <div className={styles.roleMenu}>
-              {availableRoles.map((ar) => (
-                <button
-                  key={`${ar.gym_id}-${ar.role}`}
-                  onClick={() => handleRoleChange(ar.gym_id, ar.role)}
-                  className={`${styles.roleOption} ${
-                    ar.role === role ? styles.roleOptionActive : ''
-                  }`}
-                >
-                  <span className={styles.roleOptionName}>{ar.role}</span>
-                  {ar.gym_name && (
-                    <span className={styles.roleOptionGym}>{ar.gym_name}</span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setShowRoleMenu(!showRoleMenu)}
+              className={styles.roleMenuToggle}
+            >
+              <span className={styles.roleMenuToggleLabel}>Cambiar Rol</span>
+              <span className={styles.roleMenuToggleIcon}>{showRoleMenu ? '▼' : '▶'}</span>
+            </button>
+            {showRoleMenu && (
+              <div className={styles.roleMenu}>
+                {availableRoles.map((ar) => (
+                  <button
+                    key={`${ar.gym_id}-${ar.role}`}
+                    onClick={() => handleRoleChange(ar.gym_id, ar.role)}
+                    className={`${styles.roleOption} ${
+                      ar.role === role ? styles.roleOptionActive : ''
+                    }`}
+                  >
+                    <span className={styles.roleOptionName}>{ar.role}</span>
+                    {ar.gym_name && (
+                      <span className={styles.roleOptionGym}>{ar.gym_name}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

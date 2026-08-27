@@ -177,15 +177,43 @@
 
 .roleSwitcher {
   margin-bottom: 1.5rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 0;
+  background: transparent;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: none;
 }
 
-.roleSwitcher .navTitle {
-  margin-top: 0;
-  margin-bottom: 0.6rem;
+.roleMenuToggle {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s ease;
+}
+
+.roleMenuToggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.roleMenuToggleLabel {
+  display: block;
+}
+
+.roleMenuToggleIcon {
+  font-size: 0.6rem;
+  margin-left: 0.4rem;
 }
 
 .roleMenu {
