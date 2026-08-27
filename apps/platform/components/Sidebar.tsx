@@ -181,6 +181,7 @@ export default function Sidebar({
             </button>
             {showRoleMenu && (
               <div className={styles.roleMenu}>
+                {console.log('[Sidebar] Rendering roleMenu:', { showRoleMenu, count: availableRoles.length })}
                 {availableRoles.map((ar) => (
                   <button
                     key={`${ar.gym_id}-${ar.role}`}
