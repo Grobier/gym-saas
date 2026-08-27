@@ -36,18 +36,25 @@ export default function Sidebar({
   const setActiveGym = useAuthStore((state) => state.setActiveGym);
   const setActiveRole = useAuthStore((state) => state.setActiveRole);
 
+  console.log('[Sidebar] Render:', { role, showRoleMenu, availableRolesCount: availableRoles.length });
+
   const handleRoleChange = (gymId: string, newRole: string) => {
+    console.log('[Sidebar] handleRoleChange:', { gymId, newRole, currentRole: role });
     setActiveGym(gymId);
     setActiveRole(newRole);
 
     // Navegar al dashboard del nuevo rol
     if (newRole === 'superadmin') {
+      console.log('[Sidebar] → /superadmin');
       router.push('/superadmin');
     } else if (newRole === 'admin') {
+      console.log('[Sidebar] → /admin');
       router.push('/admin');
     } else if (newRole === 'coach') {
+      console.log('[Sidebar] → /coach');
       router.push('/coach');
     } else if (newRole === 'student') {
+      console.log('[Sidebar] → /student');
       router.push('/student');
     }
     setShowRoleMenu(false);
@@ -163,7 +170,10 @@ export default function Sidebar({
         {availableRoles.length > 0 && (
           <div className={styles.roleSwitcher}>
             <button
-              onClick={() => setShowRoleMenu(!showRoleMenu)}
+              onClick={() => {
+                console.log('[Sidebar] Toggle role menu:', !showRoleMenu, 'availableRoles:', availableRoles);
+                setShowRoleMenu(!showRoleMenu);
+              }}
               className={styles.roleMenuToggle}
             >
               <span className={styles.roleMenuToggleLabel}>Cambiar Rol</span>
