@@ -175,6 +175,66 @@
   color: white;
 }
 
+.roleSwitcher {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.roleSwitcher .navTitle {
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+}
+
+.roleMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.roleOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.roleOption:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.roleOptionActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+}
+
+.roleOptionName {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.roleOptionGym {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 0.2rem;
+}
+
 .logoutSection {
   margin-top: auto;
   padding-top: 1rem;

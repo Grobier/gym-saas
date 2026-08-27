@@ -14,6 +14,7 @@ import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ConfirmActionModal from '../../components/superadmin/ConfirmActionModal';
+import EditGymModal from '../../components/superadmin/EditGymModal';
 import saStyles from '../../styles/superadmin.module.css';
 
 export default function SuperAdminGymDetailPage() {
@@ -28,6 +29,8 @@ export default function SuperAdminGymDetailPage() {
   const [archiveReason, setArchiveReason] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [savingGymInfo, setSavingGymInfo] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -192,6 +195,32 @@ export default function SuperAdminGymDetailPage() {
     setDeleteOpen(true);
   };
 
+  const handleUpdateGym = async (payload: { gym_name: string; city: string }) => {
+    if (!gym) return;
+
+    setSavingGymInfo(true);
+    try {
+      const { error } = await superadminAPI.updateGym({
+        gym_id: gym.gym_id,
+        gym_name: payload.gym_name,
+        city: payload.city || undefined,
+      });
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : 'No se pudo actualizar el gimnasio');
+      }
+
+      toast.success('Información del gimnasio actualizada');
+      setEditOpen(false);
+      await bootstrap();
+    } catch (runtimeError: any) {
+      console.error('Update gym detail error:', runtimeError);
+      toast.error(runtimeError?.message || 'No se pudo actualizar el gimnasio');
+    } finally {
+      setSavingGymInfo(false);
+    }
+  };
+
   const confirmDeleteGym = async () => {
     if (!gym) return;
 
@@ -321,6 +350,9 @@ export default function SuperAdminGymDetailPage() {
               className={saStyles.secondaryAction}
             >
               Volver al Dashboard
+            </button>
+            <button onClick={() => setEditOpen(true)} className={saStyles.secondaryAction}>
+              Editar info
             </button>
             <button
               onClick={handleToggleGym}
@@ -561,6 +593,15 @@ export default function SuperAdminGymDetailPage() {
         requiredText="ELIMINAR"
         typedValue={deleteConfirmation}
         onTypedValueChange={setDeleteConfirmation}
+      />
+
+      <EditGymModal
+        open={editOpen}
+        initialGymName={gym.gym_name}
+        initialCity={gym.city}
+        isSaving={savingGymInfo}
+        onClose={() => setEditOpen(false)}
+        onSubmit={handleUpdateGym}
       />
     </>
   );

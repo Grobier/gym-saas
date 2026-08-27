@@ -48,6 +48,10 @@ serve(async (req) => {
       return await createGym(supabaseAdmin, body);
     }
 
+    if (action === "update_gym") {
+      return await updateGym(supabaseAdmin, body);
+    }
+
     return jsonResponse({ error: "Unsupported action" }, 400);
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
@@ -222,6 +226,55 @@ async function createGym(supabaseAdmin: any, body: any) {
     admin_user_id: authData.user.id,
     admin_email: adminEmail,
     temp_password: adminPassword,
+  });
+}
+
+async function updateGym(supabaseAdmin: any, body: any) {
+  const gymId = body?.gym_id?.trim();
+  const gymName = body?.gym_name?.trim();
+  const city = body?.city?.trim() || null;
+
+  if (!gymId || !gymName) {
+    return jsonResponse({ error: "Missing required fields: gym_id, gym_name" }, 400);
+  }
+
+  const updates: Record<string, unknown> = {
+    name: gymName,
+  };
+  updates.city = city;
+
+  const candidateUpdates = [
+    updates,
+    { name: gymName },
+  ];
+
+  let gymData: any = null;
+  let gymError: any = null;
+
+  for (const candidate of candidateUpdates) {
+    const response = await supabaseAdmin
+      .from("gyms")
+      .update(candidate)
+      .eq("id", gymId)
+      .select()
+      .single();
+
+    if (!response.error) {
+      gymData = response.data;
+      gymError = null;
+      break;
+    }
+
+    gymError = response.error;
+  }
+
+  if (gymError) {
+    return jsonResponse({ error: `Gym update error: ${gymError.message}` }, 400);
+  }
+
+  return jsonResponse({
+    success: true,
+    gym: gymData,
   });
 }
 

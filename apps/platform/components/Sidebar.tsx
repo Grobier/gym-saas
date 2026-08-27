@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useAuthStore } from '../lib/store';
 import styles from '../styles/sidebar.module.css';
+
+interface AvailableRole {
+  gym_id: string;
+  gym_name?: string;
+  role: 'admin' | 'coach' | 'student' | 'superadmin';
+}
 
 interface SidebarProps {
   role: 'admin' | 'coach' | 'student' | 'superadmin';
@@ -10,6 +17,7 @@ interface SidebarProps {
   onSelectGym?: (gymId: string) => void;
   userName?: string | null | undefined;
   onLogout?: () => void;
+  availableRoles?: AvailableRole[];
 }
 
 export default function Sidebar({
@@ -19,10 +27,32 @@ export default function Sidebar({
   onSelectGym,
   userName,
   onLogout,
+  availableRoles = [],
 }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
   const isSuperadmin = role === 'superadmin';
+  const setActiveGym = useAuthStore((state) => state.setActiveGym);
+  const setActiveRole = useAuthStore((state) => state.setActiveRole);
+
+  const handleRoleChange = (gymId: string, newRole: string) => {
+    setActiveGym(gymId);
+    setActiveRole(newRole);
+
+    // Navegar al dashboard del nuevo rol
+    if (newRole === 'superadmin') {
+      router.push('/superadmin');
+    } else if (newRole === 'admin') {
+      router.push('/admin');
+    } else if (newRole === 'coach') {
+      router.push('/coach');
+    } else if (newRole === 'student') {
+      router.push('/student');
+    }
+    setShowRoleMenu(false);
+    setMobileOpen(false);
+  };
 
   const getNavItems = () => {
     switch (role) {
@@ -126,6 +156,29 @@ export default function Sidebar({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Role Switcher */}
+        {availableRoles.length > 0 && (
+          <div className={styles.roleSwitcher}>
+            <h3 className={styles.navTitle}>Cambiar Rol</h3>
+            <div className={styles.roleMenu}>
+              {availableRoles.map((ar) => (
+                <button
+                  key={`${ar.gym_id}-${ar.role}`}
+                  onClick={() => handleRoleChange(ar.gym_id, ar.role)}
+                  className={`${styles.roleOption} ${
+                    ar.role === role ? styles.roleOptionActive : ''
+                  }`}
+                >
+                  <span className={styles.roleOptionName}>{ar.role}</span>
+                  {ar.gym_name && (
+                    <span className={styles.roleOptionGym}>{ar.gym_name}</span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

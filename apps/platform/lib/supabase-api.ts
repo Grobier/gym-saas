@@ -543,6 +543,26 @@ export const superadminAPI = {
 
     return { data, error: null };
   },
+
+  async updateGym(payload: { gym_id: string; gym_name: string; city?: string }) {
+    const { data, error } = await supabase.functions.invoke('manage-gym', {
+      body: {
+        action: 'update_gym',
+        ...payload,
+      },
+    });
+
+    if (error) {
+      console.error('Error updating gym:', error);
+      return { data: null, error };
+    }
+
+    if (data?.error) {
+      return { data: null, error: data.error };
+    }
+
+    return { data, error: null };
+  },
 };
 
 // Payments APIs
