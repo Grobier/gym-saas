@@ -36,7 +36,9 @@ export default function Sidebar({
   const setActiveGym = useAuthStore((state) => state.setActiveGym);
   const setActiveRole = useAuthStore((state) => state.setActiveRole);
 
-  console.log('[Sidebar] Render:', { role, showRoleMenu, availableRolesCount: availableRoles.length });
+  useEffect(() => {
+    console.log('[Sidebar] Render:', { role, showRoleMenu, availableRolesCount: availableRoles.length });
+  }, [role, showRoleMenu, availableRoles.length]);
 
   const handleRoleChange = (gymId: string, newRole: string) => {
     console.log('[Sidebar] handleRoleChange:', { gymId, newRole, currentRole: role });
@@ -181,7 +183,6 @@ export default function Sidebar({
             </button>
             {showRoleMenu && (
               <div className={styles.roleMenu}>
-                {console.log('[Sidebar] Rendering roleMenu:', { showRoleMenu, count: availableRoles.length })}
                 {availableRoles.map((ar) => (
                   <button
                     key={`${ar.gym_id}-${ar.role}`}
